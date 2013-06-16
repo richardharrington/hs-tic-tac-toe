@@ -2,10 +2,25 @@
   (:require [clojure.test :refer :all]
             [tic-tac-toe.core :refer :all]))
 
-(def test-grid 
-    [ ["*" "*" "X"] 
+(def test-grid-template
+    [ ["X" "O" "X"] 
+      ["O" "*" "O"]
+      ["O" "*" "O"] ] )
+
+(def test-grid
+    [ ["X" "O" "O"]
       ["O" "*" "*"]
-      ["*" "*" "*"] ] )
+      ["X" "O" "O"] ] )
+
+(deftest import-grid-template-test
+  (testing "importing grid template"
+    (is (= (import-grid-template test-grid-template)
+           test-grid))))
+
+(deftest export-grid-for-display-test
+  (testing "exporting grid for display"
+    (is (= (export-grid-for-display test-grid)
+           test-grid-template))))
 
 (deftest replace-item-test
   (testing "replacing an item in a vector"
@@ -14,8 +29,14 @@
 
 (deftest replace-item-nested-2d-test
   (testing "replacing an item in a 2d vector"
-    (is (= (replace-item-nested-2d [[1 2] [3 4] [5 6]] 1 0 "apples")
+    (is (= (replace-item-nested-2d [[1 2] [3 4] [5 6]] "apples" 1 0)
            [[1 2] ["apples" 4] [5 6]]))))
+
+(deftest coordinates-test
+  (testing "getting list of coordinates for 2d vector"
+    (is (= (coordinates [[9 9 8] [3 4 5]])
+           [{:x 0 :y 0} {:x 0 :y 1} {:x 0 :y 2} 
+            {:x 1 :y 0} {:x 1 :y 1} {:x 1 :y 2}]))))
 
 (deftest marker-at-test-1
   (testing "marker at a full square"
@@ -23,14 +44,19 @@
 
 (deftest marker-at-test-2
   (testing "marker at an empty square"
-    (is (= (marker-at test-grid 2 2) "*"))))
+    (is (= (marker-at test-grid 1 2) "*"))))
 
-(deftest add-marker-test
+(deftest replace-marker-test
   (testing "adding a marker to a grid"
-    (is (= (add-marker test-grid "X" 1 1) 
-           [ ["*" "*" "X"] 
-             ["O" "X" "*"]
-             ["*" "*" "*"] ] ))))
+    (is (= (export-grid-for-display (replace-marker test-grid "X" 1 1))
+           [ ["X" "O" "X"] 
+             ["O" "X" "O"]
+             ["O" "*" "O"] ] ))))
+
+(deftest free-squares-test
+  (testing "finding free squares"
+    (is (= (free-squares test-grid)
+           [{:x 1 :y 1} {:x 1 :y 2}]))))
 
 
 
