@@ -32,25 +32,25 @@
     (is (= (replace-item-nested-2d [[1 2] [3 4] [5 6]] "apples" 1 0)
            [[1 2] ["apples" 4] [5 6]]))))
 
-(deftest coordinates-seq-test
-  (testing "getting sequence of coordinates for 2d vector"
-    (is (= (coordinates-seq [[9 9 8] [3 4 5]])
-           [{:x 0 :y 0} {:x 0 :y 1} {:x 0 :y 2} 
-            {:x 1 :y 0} {:x 1 :y 1} {:x 1 :y 2}]))))
+(deftest coordinates-set-test
+  (testing "getting set of coordinates for 2d vector"
+    (is (= (coordinates-set [[9 9 8] [3 4 5]])
+           #{[0 0] [0 1] [0 2] 
+             [1 0] [1 1] [1 2]}))))
 
 (deftest marker-at-test-1
   (testing "marker at a full square"
-    (is (= (marker-at test-grid {:x 2, :y 0}) "X"))))
+    (is (= (marker-at test-grid [2 0]) "X"))))
 
 (deftest marker-at-test-2
   (testing "marker at an empty square"
-    (is (= (marker-at test-grid {:x 1, :y 2}) "*"))))
+    (is (= (marker-at test-grid [1 2]) "*"))))
 
 (deftest replace-marker-test
   (testing "adding a marker to a grid"
     (is (= (export-grid-for-display (replace-marker test-grid 
                                                     "X" 
-                                                    {:x 1, :y 1}))
+                                                    [1 1]))
            [["X" "O" "X"] 
             ["O" "X" "O"]
             ["O" "*" "O"]]))))
@@ -58,7 +58,7 @@
 (deftest free-squares-test
   (testing "finding free squares"
     (is (= (free-squares test-grid)
-           [{:x 1 :y 1} {:x 1 :y 2}]))))
+           #{[1 1] [1 2]}))))
 
 
 
