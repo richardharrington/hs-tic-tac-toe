@@ -3,14 +3,14 @@
             [tic-tac-toe.core :refer :all]))
 
 (def test-grid-template
-    [ ["X" "O" "X"] 
-      ["O" "*" "O"]
-      ["O" "*" "O"] ] )
+  [["X" "O" "X"] 
+   ["O" "*" "O"]
+   ["O" "*" "O"]])
 
 (def test-grid
-    [ ["X" "O" "O"]
-      ["O" "*" "*"]
-      ["X" "O" "O"] ] )
+  [["X" "O" "O"]
+   ["O" "*" "*"]
+   ["X" "O" "O"]])
 
 (deftest import-grid-template-test
   (testing "importing grid template"
@@ -49,9 +49,9 @@
 (deftest replace-marker-test
   (testing "adding a marker to a grid"
     (is (= (export-grid-for-display (replace-marker test-grid "X" 1 1))
-           [ ["X" "O" "X"] 
-             ["O" "X" "O"]
-             ["O" "*" "O"] ] ))))
+           [["X" "O" "X"] 
+            ["O" "X" "O"]
+            ["O" "*" "O"]]))))
 
 (deftest free-squares-test
   (testing "finding free squares"
