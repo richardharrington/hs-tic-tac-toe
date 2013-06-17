@@ -22,21 +22,18 @@
     (is (= (export-grid-for-display test-grid)
            test-grid-template))))
 
-(deftest replace-item-test
-  (testing "replacing an item in a vector"
-    (is (= (replace-item [1 2 3 4 5 6 7 8 9] 4 "apples")
-           [1 2 3 4 "apples" 6 7 8 9]))))
-
-(deftest replace-item-nested-2d-test
-  (testing "replacing an item in a 2d vector"
-    (is (= (replace-item-nested-2d [[1 2] [3 4] [5 6]] "apples" 1 0)
-           [[1 2] ["apples" 4] [5 6]]))))
-
 (deftest coordinates-set-test
   (testing "getting set of coordinates for 2d vector"
     (is (= (coordinates-set [[9 9 8] [3 4 5]])
            #{[0 0] [0 1] [0 2] 
              [1 0] [1 1] [1 2]}))))
+
+(deftest empty-grid-test
+  (testing "generating an empty grid"
+    (is (= (empty-grid)
+           [["*" "*" "*"]
+            ["*" "*" "*"]
+            ["*" "*" "*"]]))))
 
 (deftest marker-at-test-1
   (testing "marker at a full square"
@@ -49,8 +46,8 @@
 (deftest replace-marker-test
   (testing "adding a marker to a grid"
     (is (= (export-grid-for-display (replace-marker test-grid 
-                                                    "X" 
-                                                    [1 1]))
+                                                    [1 1]
+                                                    "X"))
            [["X" "O" "X"] 
             ["O" "X" "O"]
             ["O" "*" "O"]]))))
@@ -60,6 +57,18 @@
     (is (= (free-squares test-grid)
            #{[1 1] [1 2]}))))
 
+(deftest interpose-bounding-test
+  (testing "interpose-bounding"
+    (is (= (interpose-bounding "|" [1 2 3])
+           '("|" 1 "|" 2 "|" 3 "|")))))
 
-
-
+(deftest output-board-test
+  (testing "outputting a string with the state of the board"
+    (is (= (output-board test-grid)
+           (str "+---+---+---+\n"
+                "| X | O | X |\n"
+                "+---+---+---+\n"
+                "| O | * | O |\n"
+                "+---+---+---+\n"
+                "| O | * | O |\n"
+                "+---+---+---+\n")))))
