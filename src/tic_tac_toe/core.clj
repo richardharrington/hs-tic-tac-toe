@@ -40,27 +40,34 @@
   [v val i j]
   (replace-item v i (replace-item (v i) j val)))
 
-(defn coordinates
-  "returns a vector of index pairs (in the form of a hash) for a 2d vector"
+(defn coordinates-seq
+  "returns a sequence of index pairs (in the form of a hash) for a 2d vector"
   [v]
-  (apply concat (map (fn [i] 
-                       (map (fn [j] 
-                              {:x i, :y j})
-                            (range (count (v i)))))
-                     (range (count v)))))
+  (for [i (range (count v))
+        j (range (count (v i)))]
+    {:x i, :y j}))
+
+  ; (apply concat (map-indexed (fn [i _] 
+  ;                              (map-indexed (fn [j _] 
+  ;                                             {:x i, :y j})
+  ;                                           (v i)))
+  ;                            v)))
 
 (defn marker-at 
   "gets the value (either 'O', 'X', or '*' for free) of a square in a 2d 3x3 grid"
-  [grid x y]
+  [grid {x :x, y :y}]
   ((grid x) y))
 
-(def replace-marker replace-item-nested-2d)
+(defn replace-marker 
+  "replaces a marker at the specified coordinates"
+  [v val {x :x, y :y}]
+  (replace-item-nested-2d v val x y))
 
 (defn free-squares
   "returns a vector of coordinates of free squares on the board"
   [grid]
-  (filter #(= (marker-at grid (% :x) (% :y)) "*") 
-          (coordinates grid)))
+  (filter #(= (marker-at grid %) "*") 
+          (coordinates-seq grid)))
 
 
 
