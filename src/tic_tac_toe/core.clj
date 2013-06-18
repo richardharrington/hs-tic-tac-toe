@@ -36,7 +36,7 @@
 
 (def three-squares-in-a-row-sets
   "all the sets of three squares in a row
-  (will make this less hard-coded in the future. Maybe."
+  (will make this less hard-coded in the future. Maybe.)"
   #{(three-squares-in-a-row [0 0] [0 1])
     (three-squares-in-a-row [1 0] [0 1])
     (three-squares-in-a-row [2 0] [0 1])
@@ -88,24 +88,35 @@
 
 (def print-board #(println (output-board %)))
 
-(defn rand-vec-el
-  "Returns a random element from a vector"
-  [v]
-  (v (rand-int (count v))))
+(defn rand-set-el
+  "Returns a random element from a set"
+  [s]
+  ((vec s) (rand-int (count s))))
 
 (defn fill-random-square
-  "returns a grid with a random square filled"
+  "returns a grid with a random square filled
+  (for testing only, before AI is created)"
   [grid marker]
   (assoc-in grid 
-                  (rand-vec-el (vec (free-squares grid))) 
-                  marker))
+            (rand-set-el (free-squares grid))
+            marker))
 
+(defn opponent-marker [marker]
+  (case marker
+    "X" "O"
+    "O" "X"))
 
-; (defn winning-squares
-;   "Returns coordinates for all the squares that will
-;   give an immediate win"
+; (defn pick-square-heuristic
+;   "picks the best square based on a series of priorities"
 ;   [grid marker]
-;   )
+;   (loop [squares-free (free-squares grid)]
+;     (cond
+;       ()))
+;   (let [squares-free (free-squares grid)
+;         squares-winning (map #())]))
+
+
+
 
 (defn game-over?
   [grid]
@@ -120,10 +131,10 @@
   (loop [grid (empty-grid)
          marker "X"]
     (do (print-board grid))
-    (cond
-      (game-over? grid) nil
-      :else (recur (fill-random-square grid marker)
-                   (if (= marker "X") "O" "X")))))
+    (if (game-over? grid)
+      nil
+      (recur (fill-random-square grid marker)
+             (opponent-marker marker)))))
 
 ; Priorities:
 
