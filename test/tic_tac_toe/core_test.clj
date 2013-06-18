@@ -32,6 +32,11 @@
     (is (= (scalar-vector-mult 6 [3 4])
            [18 24]))))
 
+(deftest three-squares-in-a-row-test
+  (testing "returns a set of three points in a line"
+    (is (= (three-squares-in-a-row [2 0] [-1 1])
+           #{[2 0][1 1][0 2]}))))
+
 (deftest coordinates-set-test
   (testing "getting set of coordinates for 2d vector"
     (is (= (coordinates-set [[9 9 8] [3 4 5]])
@@ -71,11 +76,6 @@
     (is (= (count (filter #(= % "X") 
                           (flatten (fill-random-square test-grid "X"))))
            3))))
-
-(deftest three-squares-in-a-row-test
-  (testing "returns a set of three points in a line"
-    (is (= (three-squares-in-a-row [2 0] [-1 1])
-           #{[2 0][1 1][0 2]}))))
 
 (deftest game-over?-test-negative
   (testing "game-over? false"

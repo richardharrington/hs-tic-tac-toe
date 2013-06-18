@@ -24,6 +24,29 @@
   [s v]
   (vec (map #(* s %) v)))
 
+(defn three-squares-in-a-row
+  "lines of three squares in a row, taken from 
+  a set of coordinates, and a direction (vector) 
+  to extend it in. Input must be well-formed,
+  meaning there have to be three squares in that direction."
+  [coordinates direction]
+  (set (map #(vector-add (scalar-vector-mult % direction)
+                         coordinates)
+            (range 3))))
+
+(def three-squares-in-a-row-sets
+  "all the sets of three squares in a row
+  (will make this less hard-coded in the future. Maybe."
+  #{(three-squares-in-a-row [0 0] [0 1])
+    (three-squares-in-a-row [1 0] [0 1])
+    (three-squares-in-a-row [2 0] [0 1])
+    (three-squares-in-a-row [0 0] [1 0])
+    (three-squares-in-a-row [0 1] [1 0])
+    (three-squares-in-a-row [0 2] [1 0])
+    (three-squares-in-a-row [0 0] [1 1])
+    (three-squares-in-a-row [2 0] [-1 1])})
+
+
 (defn coordinates-set
   "returns a set of coordinate pairs for a 2d vector"
   [v]
@@ -77,40 +100,21 @@
                   (rand-vec-el (vec (free-squares grid))) 
                   marker))
 
-(defn three-squares-in-a-row
-  "returns a set of coordinates for a three-square line
-   given one square and a direction vector (assumes
-   well-formed input, i.e. there exist three squares
-   in that direction)"
-   [coordinates direction]
-   (set (map #(vector-add (scalar-vector-mult % direction)
-                          coordinates)
-             (range 3))))
 
-(defn three-squares-in-a-row-sets
-  "returns all the sets of three squares in a row
-  (will make this less hard-coded in the future. Maybe."
-  []
-  #{(three-squares-in-a-row [0 0] [0 1])
-    (three-squares-in-a-row [1 0] [0 1])
-    (three-squares-in-a-row [2 0] [0 1])
-    (three-squares-in-a-row [0 0] [1 0])
-    (three-squares-in-a-row [0 1] [1 0])
-    (three-squares-in-a-row [0 2] [1 0])
-    (three-squares-in-a-row [0 0] [1 1])
-    (three-squares-in-a-row [2 0] [-1 1])})
+; (defn winning-squares
+;   "Returns coordinates for all the squares that will
+;   give an immediate win"
+;   [grid marker]
+;   )
 
 (defn game-over?
-  "fix this; it's repeating code"
   [grid]
   (some (fn [three-squares]
-          (or (every? #(let [marker (get-in grid %)]
-                     (= "X" marker))
-                  three-squares)
-              (every? #(let [marker (get-in grid %)]
-                     (= "O" marker))
-                  three-squares)))
-        (three-squares-in-a-row-sets)))
+          (let [all-one-marker (fn [marker]
+                                 (every? #(= (get-in grid %) marker) 
+                                         three-squares))]
+            (or (all-one-marker "X") (all-one-marker"O"))))
+        three-squares-in-a-row-sets))
 
 (defn make-it-so []
   (loop [grid (empty-grid)
@@ -120,3 +124,11 @@
       (game-over? grid) nil
       :else (recur (fill-random-square grid marker)
                    (if (= marker "X") "O" "X")))))
+
+; Priorities:
+
+; 1) Win
+; 2) Prevent disaster
+; 3) Put it in the middle
+; 4) Put it in the corner
+; 5) Put it anywhere
