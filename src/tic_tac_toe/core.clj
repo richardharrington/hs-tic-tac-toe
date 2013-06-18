@@ -106,16 +106,29 @@
     "X" "O"
     "O" "X"))
 
-; (defn pick-square-heuristic
-;   "picks the best square based on a series of priorities"
-;   [grid marker]
-;   (loop [squares-free (free-squares grid)]
-;     (cond
-;       ()))
-;   (let [squares-free (free-squares grid)
-;         squares-winning (map #())]))
-
-
+(defn pick-square-heuristic
+  "picks the best square based on a series of priorities"
+  [grid marker]
+  (let [free (free-squares grid)
+        other-two-squares-filled (fn [m]
+                                   (set (filter 
+                                          (fn [free-square]
+                                            (some (fn [three-squares]
+                                                    (every? #(= (get-in grid %) m) 
+                                                            (disj three-squares free-square)))
+                                                  three-squares-in-a-row-sets))
+                                          free)))
+        winning (other-two-squares-filled marker)
+        losing (other-two-squares-filled (opponent-marker marker))
+        center ('clojure.set/difference #{[1 1]} free)
+        corners ('clojure.set/difference #{[0 0][0 2][2 0][2 2]} free)]
+    (cond
+      (seq? winning) (rand-set-el winning)
+      (seq? losing) (rand-set-el losing)
+      (seq? center) (rand-set-el center)
+      (seq? corners) (rand-set-el corners)
+      (seq? free) (rand-set-el free)
+      :else nil)))
 
 
 (defn game-over?
@@ -124,7 +137,7 @@
           (let [all-one-marker (fn [marker]
                                  (every? #(= (get-in grid %) marker) 
                                          three-squares))]
-            (or (all-one-marker "X") (all-one-marker"O"))))
+            (or (all-one-marker "X") (all-one-marker "O"))))
         three-squares-in-a-row-sets))
 
 (defn make-it-so []
@@ -132,7 +145,7 @@
          marker "X"]
     (do (print-board grid))
     (if (game-over? grid)
-      nil
+      (str "Game over! " (opponent-marker marker) " won.")
       (recur (fill-random-square grid marker)
              (opponent-marker marker)))))
 
