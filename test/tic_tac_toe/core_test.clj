@@ -12,15 +12,25 @@
    ["O" "*" "*"]
    ["X" "O" "O"]])
 
-(deftest import-grid-template-test
-  (testing "importing grid template"
-    (is (= (import-grid-template test-grid-template)
+(def game-over-test-grid
+  [["X" "X" "X"]
+   ["O" "*" "*"]
+   ["X" "O" "O"]])
+
+(deftest matrix-transpose-test
+  (testing "transposing a board from organized by rows to organized by columns"
+    (is (= (matrix-transpose test-grid-template)
            test-grid))))
 
-(deftest export-grid-for-display-test
-  (testing "exporting grid for display"
-    (is (= (export-grid-for-display test-grid)
-           test-grid-template))))
+(deftest vector-add-test
+  (testing "adding vectors"
+    (is (= (vector-add [1 2] [10 20])
+           [11 22]))))
+
+(deftest scalar-vector-mult-test
+  (testing "multiplying scalars by vectors"
+    (is (= (scalar-vector-mult 6 [3 4])
+           [18 24]))))
 
 (deftest coordinates-set-test
   (testing "getting set of coordinates for 2d vector"
@@ -34,23 +44,6 @@
            [["*" "*" "*"]
             ["*" "*" "*"]
             ["*" "*" "*"]]))))
-
-(deftest marker-at-test-1
-  (testing "marker at a full square"
-    (is (= (marker-at test-grid [2 0]) "X"))))
-
-(deftest marker-at-test-2
-  (testing "marker at an empty square"
-    (is (= (marker-at test-grid [1 2]) "*"))))
-
-(deftest replace-marker-test
-  (testing "adding a marker to a grid"
-    (is (= (export-grid-for-display (replace-marker test-grid 
-                                                    [1 1]
-                                                    "X"))
-           [["X" "O" "X"] 
-            ["O" "X" "O"]
-            ["O" "*" "O"]]))))
 
 (deftest free-squares-test
   (testing "finding free squares"
@@ -72,3 +65,23 @@
                 "+---+---+---+\n"
                 "| O | * | O |\n"
                 "+---+---+---+\n")))))
+
+(deftest fill-random-square-test
+  (testing "filling a random square; testing at least whether there is one more of that type of marker"
+    (is (= (count (filter #(= % "X") 
+                          (flatten (fill-random-square test-grid "X"))))
+           3))))
+
+(deftest three-squares-in-a-row-test
+  (testing "returns a set of three points in a line"
+    (is (= (three-squares-in-a-row [2 0] [-1 1])
+           #{[2 0][1 1][0 2]}))))
+
+(deftest game-over?-test-negative
+  (testing "game-over? false"
+    (is (= (game-over? test-grid)
+           nil))))
+
+(deftest game-over?-test-positive
+  (testing "game-over? true"
+    (is (= (game-over? game-over-test-grid)))))

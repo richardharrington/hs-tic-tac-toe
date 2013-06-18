@@ -14,20 +14,15 @@
   [mtx]
   (vec (apply map vector mtx)))
 
-(def import-grid-template 
-  "converts vector of rows (easier to type in for tests)
-  into vector of columns (easier to deal with programmatically,
-  because it's [x y] instead of [y x]"
-  matrix-transpose)
+(defn vector-add
+  "vector addition"
+  [& vecs]
+  (vec (apply map + vecs)))
 
-; (defn replace-item-nested-2d
-;   "returns a 2d vector with one item replaced at coordinates"
-;   [v val i j]
-;   (assoc v i (assoc (v i) j val)))
-
-(def export-grid-for-display
-  "transposes vector-of-columns to vector-of-rows for display"
-  matrix-transpose)
+(defn scalar-vector-mult
+  "vector-scalar multiplication"
+  [s v]
+  (vec (map #(* s %) v)))
 
 (defn coordinates-set
   "returns a set of coordinate pairs for a 2d vector"
@@ -41,18 +36,10 @@
   []
   (vec (repeat 3 (vec (repeat 3 "*")))))
   
-(def marker-at 
-  "gets the value (either 'O', 'X', or '*' for free) of a square in a 2d 3x3 grid"
-  get-in)
-
-(def replace-marker 
-  "replaces a marker at the specified coordinates and returns the whole nested structure"
-  assoc-in)
-
 (defn free-squares
   "returns a set of coordinate pairs of free squares on the board"
   [grid]
-  (set (filter #(= (marker-at grid %) "*") 
+  (set (filter #(= (get-in grid %) "*") 
                (coordinates-set grid))))
 
 (defn interpose-bounding
@@ -64,14 +51,17 @@
 (defn output-board
   "returns a string for displaying the board"
   [grid]
-  (apply 
-    str (interpose-bounding "+---+---+---+\n" 
-                            (map (fn [row] 
-                                   (apply 
-                                     str (concat (interpose-bounding 
-                                                   "|" 
-                                                   (map #(str " " % " ") row)) "\n")))
-                                 (export-grid-for-display grid)))))
+  (let [interpose-bounding (fn [divider s]
+                             (concat (interleave (repeat divider) s) 
+                                     [divider]))]
+    (apply str (interpose-bounding 
+                 "+---+---+---+\n" 
+                 (map (fn [row] 
+                        (apply str (concat (interpose-bounding 
+                                             "|" 
+                                             (map #(str " " % " ") row)) "\n")))
+                      (matrix-transpose grid))))))
+ 
 
 (def print-board #(println (output-board %)))
 
@@ -79,20 +69,54 @@
   "Returns a random element from a vector"
   [v]
   (v (rand-int (count v))))
-                             
 
 (defn fill-random-square
   "returns a grid with a random square filled"
   [grid marker]
-  (replace-marker grid 
+  (assoc-in grid 
                   (rand-vec-el (vec (free-squares grid))) 
                   marker))
-   
-; display
 
-; (def print-board
-;     "prints the board from a grid"
-;     [grid]
-;     (let [display-grid (export-grid-for-display grid)]
-;          (println (str "-------\n" ))
+(defn three-squares-in-a-row
+  "returns a set of coordinates for a three-square line
+   given one square and a direction vector (assumes
+   well-formed input, i.e. there exist three squares
+   in that direction)"
+   [coordinates direction]
+   (set (map #(vector-add (scalar-vector-mult % direction)
+                          coordinates)
+             (range 3))))
 
+(defn three-squares-in-a-row-sets
+  "returns all the sets of three squares in a row
+  (will make this less hard-coded in the future. Maybe."
+  []
+  #{(three-squares-in-a-row [0 0] [0 1])
+    (three-squares-in-a-row [1 0] [0 1])
+    (three-squares-in-a-row [2 0] [0 1])
+    (three-squares-in-a-row [0 0] [1 0])
+    (three-squares-in-a-row [0 1] [1 0])
+    (three-squares-in-a-row [0 2] [1 0])
+    (three-squares-in-a-row [0 0] [1 1])
+    (three-squares-in-a-row [2 0] [-1 1])})
+
+(defn game-over?
+  "fix this; it's repeating code"
+  [grid]
+  (some (fn [three-squares]
+          (or (every? #(let [marker (get-in grid %)]
+                     (= "X" marker))
+                  three-squares)
+              (every? #(let [marker (get-in grid %)]
+                     (= "O" marker))
+                  three-squares)))
+        (three-squares-in-a-row-sets)))
+
+(defn make-it-so []
+  (loop [grid (empty-grid)
+         marker "X"]
+    (do (print-board grid))
+    (cond
+      (game-over? grid) nil
+      :else (recur (fill-random-square grid marker)
+                   (if (= marker "X") "O" "X")))))
