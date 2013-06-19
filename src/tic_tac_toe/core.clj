@@ -143,33 +143,14 @@
         (rand-seq-el free))))
   
 (defn winner
-  "Returns 'X', 'O' or nil. Returns the marker of the first
-   three-in-a-row it finds, so board must be valid
-   (i.e., no two sets of three in a row"
   [grid]
-  
-  (let [marker-all-three (fn [three-squares]
-                           (if every? #(= (get-in grid %) 
-                                          three-squares))])
-  
-  (let [all-one-marker? (fn [] (every?  = %)]
-    (some (fn [three-squares]
-            (some all-in-one-marker? ))
-          (three-squares-in-a-row-sets))
-        
-        (fn [three-squares]
-                          (apply = ))])
-  
-  (let [all-one-marker? (fn [three-squares marker]
-                         (every? #(= (get-in grid %) marker) 
-                                 three-squares))
-        any-threes-filled? (fn [marker]
-                             (some #(all-one-marker? % marker)
-                                   three-squares-in-a-row-sets))]
-    (cond
-      (any-threes-filled? "X") "X"
-      (any-threes-filled? "O") "O"
-      :else nil)))
+  (some (fn [three-squares]
+          (let [all-one-marker (fn [marker]
+                                 (when (every? #(= (get-in grid %) marker) 
+                                         three-squares)
+                                   marker))]
+            (or (all-one-marker "X") (all-one-marker "O"))))
+        three-squares-in-a-row-sets))
     
 (defn board-full?
   [grid]
