@@ -2,6 +2,7 @@
   (:gen-class))
 
 (require '[clj-http.client :as client])
+(require 'clojure.set)
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -90,17 +91,18 @@
 
 (def print-board #(println (output-board %)))
 
-(defn rand-set-el
-  "Returns a random element from a set"
+(defn rand-seq-el
+  "Returns a random element from a sequence (or nil if it's empty)"
   [s]
-  ((vec s) (rand-int (count s))))
+  (if (empty? s) nil
+    ((vec s) (rand-int (count s)))))
 
 (defn fill-random-square
   "returns a grid with a random square filled
   (for testing only, before AI is created)"
   [grid marker]
   (assoc-in grid 
-            (rand-set-el (free-squares grid))
+            (rand-seq-el (free-squares grid))
             marker))
 
 (defn opponent-marker [marker]
@@ -108,48 +110,74 @@
     "X" "O"
     "O" "X"))
 
+; (defn pick-square-minimax
+;   "plays out the game to all its possible conclusions
+;   and works back to find the best set of moves"
+;   [grid marker]
+;   (let [winning-player (winner grid)]
+;     (cond
+;       (= winning-player marker) 1
+;       (= winning-player (opponent-marker) -1)
+;       (board-full? 0)
+;       :else (pick-square-minimax )
+      
+
 (defn pick-square-heuristic
-  "picks the best square based on a series of priorities"
+  "picks the best square based on a series of priorities:
+   1) Win, 2) Prevent imminent loss, 3) Center, 4) Corner, 5) Anywhere"
   [grid marker]
   (let [free (free-squares grid)
-        other-two-squares-filled (fn [m]
-                                   (set (filter 
-                                          (fn [free-square]
-                                            (some (fn [three-squares]
-                                                    (every? #(= (get-in grid %) m) 
-                                                            (disj three-squares free-square)))
-                                                  three-squares-in-a-row-sets))
-                                          free)))
-        winning (other-two-squares-filled marker)
-        losing (other-two-squares-filled (opponent-marker marker))
-        center ('clojure.set/difference #{[1 1]} free)
-        corners ('clojure.set/difference #{[0 0][0 2][2 0][2 2]} free)]
-    (cond
-      (seq? winning) (rand-set-el winning)
-      (seq? losing) (rand-set-el losing)
-      (seq? center) (rand-set-el center)
-      (seq? corners) (rand-set-el corners)
-      (seq? free) (rand-set-el free)
-      :else nil)))
-
-
+        imminent-win (fn [m]
+                       (set (filter 
+                              (fn [free-square]
+                                (some (fn [three-squares]
+                                        (every? #(= (get-in grid %) m) 
+                                                (disj three-squares free-square)))
+                                      three-squares-in-a-row-sets))
+                              free)))]
+    
+    (or (rand-seq-el (imminent-win marker))
+        (rand-seq-el (imminent-win (opponent-marker marker)))
+        (rand-seq-el (clojure.set/intersection #{[1 1]} free))
+        (rand-seq-el (clojure.set/intersection #{[0 0][0 2][2 0][2 2]} free))
+        (rand-seq-el free))))
+  
 (defn winner
+  "Returns 'X', 'O' or nil. Returns the marker of the first
+   three-in-a-row it finds, so board must be valid
+   (i.e., no two sets of three in a row"
   [grid]
-  (let [all-one-marker (fn [three-squares marker]
-                         (every? #(= (get-in grid %) marker) 
-                                 three-squares))]
+  
+  (let [marker-all-three (fn [three-squares]
+                           (if every? #(= (get-in grid %) 
+                                          three-squares))])
+  
+  (let [all-one-marker? (fn [] (every?  = %)]
     (some (fn [three-squares]
-            (cond
-              (all-one-marker three-squares "X") "X"
-              (all-one-marker three-squares "O") "O"
-              :else nil))
-          three-squares-in-a-row-sets)))
-
+            (some all-in-one-marker? ))
+          (three-squares-in-a-row-sets))
+        
+        (fn [three-squares]
+                          (apply = ))])
+  
+  (let [all-one-marker? (fn [three-squares marker]
+                         (every? #(= (get-in grid %) marker) 
+                                 three-squares))
+        any-threes-filled? (fn [marker]
+                             (some #(all-one-marker? % marker)
+                                   three-squares-in-a-row-sets))]
+    (cond
+      (any-threes-filled? "X") "X"
+      (any-threes-filled? "O") "O"
+      :else nil)))
+    
 (defn board-full?
   [grid]
   (not-any? (fn [column] 
               (some #(= % "*") column))
             grid))
+
+; for debugging: (def pick-square-heuristic fill-random-square)
 
 (defn make-it-so []
   (loop [grid (empty-grid)
@@ -162,10 +190,3 @@
         :else (recur (fill-random-square grid marker)
                      (opponent-marker marker))))))
   
-; Priorities:
-
-; 1) Win
-; 2) Prevent disaster
-; 3) Put it in the middle
-; 4) Put it in the corner
-; 5) Put it anywhere
