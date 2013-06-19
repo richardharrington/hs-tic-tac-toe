@@ -12,9 +12,14 @@
    ["O" "*" "*"]
    ["X" "O" "O"]])
 
-(def game-over-test-grid
+(def winner-test-grid
   [["X" "X" "X"]
    ["O" "*" "*"]
+   ["X" "O" "O"]])
+
+(def board-full-grid
+  [["X" "X" "X"]
+   ["O" "O" "X"]
    ["X" "O" "O"]])
 
 (deftest matrix-transpose-test
@@ -77,11 +82,22 @@
                           (flatten (fill-random-square test-grid "X"))))
            3))))
 
-(deftest game-over?-test-negative
-  (testing "game-over? false"
-    (is (= (game-over? test-grid)
+(deftest winner-test-negative-test
+  (testing "winner nil"
+    (is (= (winner test-grid)
            nil))))
 
-(deftest game-over?-test-positive
-  (testing "game-over? true"
-    (is (= (game-over? game-over-test-grid)))))
+(deftest winner-test-positive-test
+  (testing "winner 'X'"
+    (is (= (winner winner-test-grid)
+           "X"))))
+
+(deftest board-full?-negative-test
+  (testing "board is not full"
+    (is (not (board-full? test-grid)))))
+
+(deftest board-full?-positive-test
+  (testing "board is not full"
+    (is (board-full? board-full-grid))))
+
+

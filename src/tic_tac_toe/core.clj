@@ -133,24 +133,35 @@
       :else nil)))
 
 
-(defn game-over?
+(defn winner
   [grid]
-  (some (fn [three-squares]
-          (let [all-one-marker (fn [marker]
-                                 (every? #(= (get-in grid %) marker) 
-                                         three-squares))]
-            (or (all-one-marker "X") (all-one-marker "O"))))
-        three-squares-in-a-row-sets))
+  (let [all-one-marker (fn [three-squares marker]
+                         (every? #(= (get-in grid %) marker) 
+                                 three-squares))]
+    (some (fn [three-squares]
+            (cond
+              (all-one-marker three-squares "X") "X"
+              (all-one-marker three-squares "O") "O"
+              :else nil))
+          three-squares-in-a-row-sets)))
+
+(defn board-full?
+  [grid]
+  (not-any? (fn [column] 
+              (some #(= % "*") column))
+            grid))
 
 (defn make-it-so []
   (loop [grid (empty-grid)
          marker "X"]
     (do (print-board grid))
-    (if (game-over? grid)
-      (str "Game over! " (opponent-marker marker) " won.")
-      (recur (fill-random-square grid marker)
-             (opponent-marker marker)))))
-
+    (let [winning-player (winner grid)]
+      (cond
+        winning-player (str "Game over! " winning-player " won.")
+        (board-full? grid) "Game over! Draw."
+        :else (recur (fill-random-square grid marker)
+                     (opponent-marker marker))))))
+  
 ; Priorities:
 
 ; 1) Win
