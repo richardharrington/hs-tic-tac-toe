@@ -17,39 +17,24 @@
   [mtx]
   (vec (apply map vector mtx)))
 
-(defn vector-add
-  "vector addition"
-  [& vecs]
-  (vec (apply map + vecs)))
-
-(defn scalar-vector-mult
-  "vector-scalar multiplication"
-  [s v]
-  (vec (map #(* s %) v)))
-
-(defn three-squares-in-a-row
-  "lines of three squares in a row, taken from 
-  a set of coordinates, and a direction (vector) 
-  to extend it in. Input must be well-formed,
-  meaning there have to be three squares in that direction."
-  [coordinates direction]
-  (set (map #(vector-add (scalar-vector-mult % direction)
-                         coordinates)
-            (range 3))))
-
 (def three-squares-in-a-row-sets
-  "all the sets of three squares in a row
-  (will make this less hard-coded in the future. Maybe.)"
-  #{(three-squares-in-a-row [0 0] [0 1])
-    (three-squares-in-a-row [1 0] [0 1])
-    (three-squares-in-a-row [2 0] [0 1])
-    (three-squares-in-a-row [0 0] [1 0])
-    (three-squares-in-a-row [0 1] [1 0])
-    (three-squares-in-a-row [0 2] [1 0])
-    (three-squares-in-a-row [0 0] [1 1])
-    (three-squares-in-a-row [2 0] [-1 1])})
+  "all the sets of three squares in a row"
+  (clojure.set/union 
+    ; vertical wins
+    (set (for [x (range 3)] 
+           (set (for [y (range 3)] 
+                  [x y]))))
+    ; horizontal wins
+    (set (for [y (range 3)] 
+           (set (for [x (range 3)] 
+                  [x y]))))
+    ; diagonal wins
+    #{(set (for [i (range 3)]
+             [i i]))
+      (set (for [i (range 3)]
+             [i (- 2 i)]))}))
 
-
+   
 (defn coordinates-set
   "returns a set of coordinate pairs for a 2d vector"
   [v]
@@ -110,16 +95,63 @@
     "X" "O"
     "O" "X"))
 
-; (defn pick-square-minimax
-;   "plays out the game to all its possible conclusions
-;   and works back to find the best set of moves"
-;   [grid marker]
-;   (let [winning-player (winner grid)]
-;     (cond
-;       (= winning-player marker) 1
-;       (= winning-player (opponent-marker) -1)
-;       (board-full? 0)
-;       :else (pick-square-minimax )
+(reduce f val col)
+
+(defn opposite-result
+  [result]
+  (case
+    "win" "lose"
+    "lose" "win"))
+
+(defn value-of-square-for-X
+  [grid square]
+  (let [potential-grid (assoc-in grid square "X")
+        winning-player (winner potential-grid)]
+    (cond
+      (= winning-player "X") "win"
+      (= winning-player "O") "lose"
+      (board-full? potential-grid) "draw"
+      :else (opponent-result
+              (reduce (fn [result new-square]
+                        (let [val (value-of-square-for-O
+                                    potential-grid
+                                    new-square)]
+                          (cond
+                            (or (= val "win") (= result "win")) "win"
+                            (or (= val "draw") (= result "draw")) "draw"
+                            :else "lose")))
+                      "lose"
+                      (free-squares potential-grid)))))))
+
+(defn value-of-square-for-O
+  [grid square])
+
+(defn value-of-square-for-either-player
+  [grid square player]
+  (let [potential-grid (assoc-in grid square player)
+        winning-player (winner potential-grid)]
+    (cond 
+      (= winning-player player) "win"
+      (= winning-player (opponent-marker player)) "lose"
+      (board-full? grid) "draw"
+      :else (reduce (fn [result square]
+                      (value-of-square-no-signs
+                        (assoc-in potential-grid square (opponent-marker))
+                        square
+                        (opponent-marker player)))
+                    "lose"
+                    (free-squares potential-grid)))))
+
+(defn minimax-value-of-square
+  "plays out the game to all its possible conclusions
+  and works back to find the best move for that square"
+  [grid marker]
+  (let [winning-player (winner grid)]
+    (cond
+      (= winning-player marker) 1
+      (= winning-player (opponent-marker) -1)
+      (board-full? 0)
+      :else (pick-square-minimax ?????)
       
 
 (defn pick-square-heuristic
@@ -141,8 +173,16 @@
         (rand-seq-el (clojure.set/intersection #{[1 1]} free))
         (rand-seq-el (clojure.set/intersection #{[0 0][0 2][2 0][2 2]} free))
         (rand-seq-el free))))
+
+(defn pick-new-grid-heuristic
+  "picks a good new game state with one marker added"
+  [grid marker]
+  (assoc-in grid
+            (pick-square-heuristic grid marker)
+            marker))
   
 (defn winner
+  "returns 'X', 'O', or nil"
   [grid]
   (some (fn [three-squares]
           (let [all-one-marker (fn [marker]
@@ -160,7 +200,7 @@
 
 ; for debugging: (def pick-square-heuristic fill-random-square)
 
-(defn make-it-so []
+(defn go []
   (loop [grid (empty-grid)
          marker "X"]
     (do (print-board grid))
@@ -168,6 +208,6 @@
       (cond
         winning-player (str "Game over! " winning-player " won.")
         (board-full? grid) "Game over! Draw."
-        :else (recur (fill-random-square grid marker)
+        :else (recur (pick-new-grid-heuristic grid marker)
                      (opponent-marker marker))))))
   

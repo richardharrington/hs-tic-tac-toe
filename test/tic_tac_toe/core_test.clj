@@ -27,20 +27,17 @@
     (is (= (matrix-transpose test-grid-template)
            test-grid))))
 
-(deftest vector-add-test
-  (testing "adding vectors"
-    (is (= (vector-add [1 2] [10 20])
-           [11 22]))))
-
-(deftest scalar-vector-mult-test
-  (testing "multiplying scalars by vectors"
-    (is (= (scalar-vector-mult 6 [3 4])
-           [18 24]))))
-
-(deftest three-squares-in-a-row-test
-  (testing "returns a set of three points in a line"
-    (is (= (three-squares-in-a-row [2 0] [-1 1])
-           #{[2 0][1 1][0 2]}))))
+(deftest three-squares-in-a-row-sets-test
+  (testing "returns a set of sets of three points in a line"
+    (is (= three-squares-in-a-row-sets
+           #{#{[2 1] [2 2] [2 0]} 
+             #{[1 0] [0 0] [2 0]} 
+             #{[2 1] [1 1] [0 1]} 
+             #{[1 0] [1 1] [1 2]} 
+             #{[1 1] [0 2] [2 0]} 
+             #{[2 2] [0 0] [1 1]} 
+             #{[0 0] [0 1] [0 2]} 
+             #{[2 2] [1 2] [0 2]}}))))
 
 (deftest coordinates-set-test
   (testing "getting set of coordinates for 2d vector"
