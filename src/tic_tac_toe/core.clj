@@ -74,19 +74,23 @@
               (some #(= % "*") column))
             grid))
 
+(defn interpose-bounding 
+  "helper function for output-board,
+  like interpose but adds on either end as well"
+  [divider s]
+  (concat (interleave (repeat divider) s) 
+          [divider]))
+
 (defn output-board
   "returns a string for displaying the board"
   [grid]
-  (let [interpose-bounding (fn [divider s]
-                             (concat (interleave (repeat divider) s) 
-                                     [divider]))]
-    (apply str (interpose-bounding 
-                 "+---+---+---+\n" 
-                 (map (fn [row] 
-                        (apply str (concat (interpose-bounding 
-                                             "|" 
-                                             (map #(str " " % " ") row)) "\n")))
-                      (matrix-transpose grid))))))
+  (apply str (interpose-bounding 
+               "+---+---+---+\n" 
+               (map (fn [row] 
+                      (apply str (concat (interpose-bounding 
+                                           "|" 
+                                           (map #(str " " % " ") row)) "\n")))
+                    (matrix-transpose grid)))))
  
 
 (def print-board #(println (output-board %)))
@@ -104,77 +108,58 @@
     "X" "O"
     "O" "X"))
 
-(defn opposite-result
-  [result]
-  (case result
-    :win :lose
-    :lose :win
-    :draw :draw))
+(declare value-of-square-minimax)
 
-(defn value-of-square-minimax-no-numbers
+(defn aggregate-value-of-free-squares-minimax
+  "helper function to use recursively with value-of-square-minimax"
+  [grid marker]
+  (apply (if (= marker "X") max min)
+         (map (fn [square]
+                (value-of-square-minimax grid square marker))
+              (free-squares grid))))
+
+(defn value-of-square-minimax
+  "determines the value of a square:
+  1 is an eventual win for X, 0 is a draw,
+  -1 is an eventual win for O."
   [grid square marker]
   (let [potential-grid (assoc-in grid square marker)
-        winning-player (winner potential-grid)
-        opponent (opposite-marker marker)]
+        winning-player (winner potential-grid)]
     (cond
-      (= winning-player marker) :win
-      (board-full? potential-grid) :draw
-      :else (opposite-result
-              (reduce (fn [result new-square]
-                        (let [val-of-new-square (value-of-square-minimax-no-numbers
-                                                  potential-grid
-                                                  new-square
-                                                  opponent)]
-                          (cond
-                            (or (= val-of-new-square :win) (= result :win)) :win
-                            (or (= val-of-new-square :draw) (= result :draw)) :draw
-                            :else :lose)))
-                      :lose
-                      (free-squares potential-grid))))))
+      (= winning-player "X") 1
+      (= winning-player "O") -1
+      (board-full? potential-grid) 0
+      :else (aggregate-value-of-free-squares-minimax 
+              potential-grid 
+              (opposite-marker marker)))))
 
-(defn pick-square-minimax-no-numbers
-  "picks a good square using the minimax algorithm"
+(defn pick-square-from-result-set
+  "helper function for pick-square-minimax"
+  [result-sets marker]
+  (cond
+    (= marker "X") (or (rand-seq-el (result-sets 1))
+                       (rand-seq-el (result-sets 0))
+                       (rand-seq-el (result-sets -1)))
+    (= marker "O") (or (rand-seq-el (result-sets -1))
+                       (rand-seq-el (result-sets 0))
+                       (rand-seq-el (result-sets 1)))))
+
+(defn pick-square-minimax
+  "picks a random (but good) square using the minimax algorithm"
   [grid marker]
-  (println "(free-squares grid): " (free-squares grid))
-  (println)
   (let [result-sets (reduce 
                       (fn [result-sets new-square]
-                        (let [val-of-square (value-of-square-minimax-no-numbers
+                        (let [val-of-square (value-of-square-minimax
                                               grid
                                               new-square
                                               marker)]
-                          (println (str "marker: " marker))
-                          (println (str "new-square: " new-square))
-                          (println (str "result-sets: " result-sets))
-                          (println (str "val-of-square: " val-of-square))
-                          (println (str "(result-sets val-of-square): "
-                                        (result-sets val-of-square)))
-                          (println (str "(conj (result-sets val-of-square) new-square): "
-                                        (conj (result-sets val-of-square) new-square)))
-                          (println "(assoc result-sets val-of-square (conj (result-sets val-of-square) new-square)):"
-                                   "\n    "  
-                                   (assoc 
-                                     result-sets 
-                                     val-of-square 
-                                     (conj (result-sets val-of-square) new-square)) )
-                          (println)
-                          
                           (assoc 
                             result-sets 
                             val-of-square 
                             (conj (result-sets val-of-square) new-square))))
-                      {:win #{}, :lose #{}, :draw #{}}
+                      {1 #{}, -1 #{}, 0 #{}}
                       (free-squares grid))]
-    (println "(rand-seq-el (result-sets :win)):" (rand-seq-el (result-sets :win)))
-    (println "(rand-seq-el (result-sets :draw)):" (rand-seq-el (result-sets :draw)))
-    (println "(rand-seq-el (result-sets :lose)):" (rand-seq-el (result-sets :lose)))
-    (println)
-    (or
-      (rand-seq-el (result-sets :win))
-      (rand-seq-el (result-sets :draw))
-      (rand-seq-el (result-sets :lose)))))
-
-
+    (pick-square-from-result-set result-sets marker)))
 
 (defn pick-square-heuristic
   "picks the best square based on a series of priorities:
@@ -202,25 +187,23 @@
   (assoc-in grid
             (picker grid marker)
             marker))
-  
-; for debugging: (def pick-square-heuristic fill-random-square)
 
 (defn go []
   (loop [grid (empty-grid)
          marker "X"
-         picker pick-square-heuristic]
+         picker pick-square-minimax]
     (let [opposite-picker (fn [picker]
                             (cond
-                              (= picker pick-square-heuristic) pick-square-minimax-no-numbers
-                              (= picker pick-square-minimax-no-numbers) pick-square-heuristic))]
+                              (= picker pick-square-heuristic) pick-square-minimax
+                              (= picker pick-square-minimax) pick-square-heuristic))]
       (do (print-board grid))
       (let [winning-player (winner grid)]
         (cond
           winning-player (str "Game over! " winning-player " won.")
           (board-full? grid) "Game over! Draw."
-          :else (recur (get-next-grid (opposite-picker picker) grid marker)
+          :else (recur (get-next-grid picker grid marker)
                        (opposite-marker marker)
-                       (opposite-picker picker)))))))
+                       picker))))))
     
 
 
