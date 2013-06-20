@@ -106,18 +106,10 @@
 
 (defn opposite-result
   [result]
-  (case
+  (case result
     :win :lose
     :lose :win
     :draw :draw))
-
-; for testing
-(defn count-markers
-  [grid marker]
-  (count (for 
-           [m (flatten grid)
-            :when (= m marker)]
-           m)))
 
 (defn value-of-square-minimax-no-numbers
   [grid square marker]
@@ -127,21 +119,20 @@
     (cond
       (= winning-player marker) :win
       (board-full? potential-grid) :draw
-      :else (do
-              (opposite-result
-                (reduce (fn [result new-square]
-                          (let [val-of-new-square (value-of-square-minimax-no-numbers
-                                                    potential-grid
-                                                    new-square
-                                                    opponent)]
-                            (cond
-                              (or (= val-of-new-square :win) (= result :win)) :win
-                              (or (= val-of-new-square :draw) (= result :draw)) :draw
-                              :else :lose)))
-                        :lose
-                      (free-squares potential-grid)))))))
+      :else (opposite-result
+              (reduce (fn [result new-square]
+                        (let [val-of-new-square (value-of-square-minimax-no-numbers
+                                                  potential-grid
+                                                  new-square
+                                                  opponent)]
+                          (cond
+                            (or (= val-of-new-square :win) (= result :win)) :win
+                            (or (= val-of-new-square :draw) (= result :draw)) :draw
+                            :else :lose)))
+                      :lose
+                      (free-squares potential-grid))))))
 
-(defn pick-square-minimax
+(defn pick-square-minimax-no-numbers
   "picks a good square using the minimax algorithm"
   [grid marker]
   (println "(free-squares grid): " (free-squares grid))
@@ -160,10 +151,12 @@
                                         (result-sets val-of-square)))
                           (println (str "(conj (result-sets val-of-square) new-square): "
                                         (conj (result-sets val-of-square) new-square)))
-                          (println "(assoc result-sets val-of-square (conj (result-sets val-of-square) new-square)): \n    "  (assoc 
-                            result-sets 
-                            val-of-square 
-                            (conj (result-sets val-of-square) new-square)) )
+                          (println "(assoc result-sets val-of-square (conj (result-sets val-of-square) new-square)):"
+                                   "\n    "  
+                                   (assoc 
+                                     result-sets 
+                                     val-of-square 
+                                     (conj (result-sets val-of-square) new-square)) )
                           (println)
                           
                           (assoc 
@@ -214,12 +207,21 @@
 
 (defn go []
   (loop [grid (empty-grid)
-         marker "X"]
-    (do (print-board grid))
-    (let [winning-player (winner grid)]
-      (cond
-        winning-player (str "Game over! " winning-player " won.")
-        (board-full? grid) "Game over! Draw."
-        :else (recur (get-next-grid pick-square-minimax grid marker)
-                     (opposite-marker marker))))))
+         marker "X"
+         picker pick-square-heuristic]
+    (let [opposite-picker (fn [picker]
+                            (cond
+                              (= picker pick-square-heuristic) pick-square-minimax-no-numbers
+                              (= picker pick-square-minimax-no-numbers) pick-square-heuristic))]
+      (do (print-board grid))
+      (let [winning-player (winner grid)]
+        (cond
+          winning-player (str "Game over! " winning-player " won.")
+          (board-full? grid) "Game over! Draw."
+          :else (recur (get-next-grid (opposite-picker picker) grid marker)
+                       (opposite-marker marker)
+                       (opposite-picker picker)))))))
+    
+
+
   
