@@ -111,6 +111,14 @@
     :lose :win
     :draw :draw))
 
+; for testing
+(defn count-markers
+  [grid marker]
+  (count (for 
+           [m (flatten grid)
+            :when (= m marker)]
+           m)))
+
 (defn value-of-square-minimax-no-numbers
   [grid square marker]
   (let [potential-grid (assoc-in grid square marker)
@@ -119,41 +127,55 @@
     (cond
       (= winning-player marker) :win
       (board-full? potential-grid) :draw
-      :else (opposite-result
-              (reduce (fn [result new-square]
-                        (let [val-of-new-square (value-of-square-minimax-no-numbers
-                                                  potential-grid
-                                                  new-square
-                                                  opponent)]
-                          (cond
-                            (or (= val-of-new-square :win) (= result :win)) :win
-                            (or (= val-of-new-square :draw) (= result :draw)) :draw
-                            :else :lose)))
-                      :lose
-                      (free-squares potential-grid))))))
+      :else (do
+              (opposite-result
+                (reduce (fn [result new-square]
+                          (let [val-of-new-square (value-of-square-minimax-no-numbers
+                                                    potential-grid
+                                                    new-square
+                                                    opponent)]
+                            (cond
+                              (or (= val-of-new-square :win) (= result :win)) :win
+                              (or (= val-of-new-square :draw) (= result :draw)) :draw
+                              :else :lose)))
+                        :lose
+                      (free-squares potential-grid)))))))
 
 (defn pick-square-minimax
   "picks a good square using the minimax algorithm"
   [grid marker]
+  (println "(free-squares grid): " (free-squares grid))
+  (println)
   (let [result-sets (reduce 
                       (fn [result-sets new-square]
                         (let [val-of-square (value-of-square-minimax-no-numbers
                                               grid
                                               new-square
                                               marker)]
+                          (println (str "marker: " marker))
                           (println (str "new-square: " new-square))
                           (println (str "result-sets: " result-sets))
-                          (println (str "((result-sets val-of-square) new-square): "
-                                        ((result-sets val-of-square) new-square)))
+                          (println (str "val-of-square: " val-of-square))
                           (println (str "(result-sets val-of-square): "
-                                        (result-sets val-of-square) "\n"))
-
+                                        (result-sets val-of-square)))
+                          (println (str "(conj (result-sets val-of-square) new-square): "
+                                        (conj (result-sets val-of-square) new-square)))
+                          (println "(assoc result-sets val-of-square (conj (result-sets val-of-square) new-square)): \n    "  (assoc 
+                            result-sets 
+                            val-of-square 
+                            (conj (result-sets val-of-square) new-square)) )
+                          (println)
+                          
                           (assoc 
                             result-sets 
                             val-of-square 
                             (conj (result-sets val-of-square) new-square))))
                       {:win #{}, :lose #{}, :draw #{}}
                       (free-squares grid))]
+    (println "(rand-seq-el (result-sets :win)):" (rand-seq-el (result-sets :win)))
+    (println "(rand-seq-el (result-sets :draw)):" (rand-seq-el (result-sets :draw)))
+    (println "(rand-seq-el (result-sets :lose)):" (rand-seq-el (result-sets :lose)))
+    (println)
     (or
       (rand-seq-el (result-sets :win))
       (rand-seq-el (result-sets :draw))
