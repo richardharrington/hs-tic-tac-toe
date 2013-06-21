@@ -227,7 +227,7 @@
 (defn go
   "for testing"
   []
-  (make-it-so pick-square-random pick-square-minimax))
+  (make-it-so pick-square-minimax pick-square-minimax))
     
 
 
