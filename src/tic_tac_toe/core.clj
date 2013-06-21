@@ -10,6 +10,12 @@
   ;; work around dangerous default behaviour in Clojure
   (alter-var-root #'*read-eval* (constantly false)))
 
+(defn toggler-maker
+  "makes a function that toggles two things"
+  [thing-1 thing-2]
+  #(condp = %
+     thing-1 thing-2
+     thing-2 thing-1))
 
 (defn matrix-transpose
   "transposes a 2d matrix"
@@ -160,13 +166,9 @@
   1 is an eventual win for X, 0 is a draw,
   -1 is an eventual win for O."
   [grid square marker]
-  (let [potential-grid (assoc-in grid square marker)
-        winning-player (winner potential-grid)]
-    (cond
-      (= winning-player "X") 1
-      (= winning-player "O") -1
-      (board-full? potential-grid) 0
-      :else (aggregate-value-of-free-squares-minimax 
+  (let [potential-grid (assoc-in grid square marker)]
+    (or (final-score potential-grid)
+        (aggregate-value-of-free-squares-minimax 
               potential-grid 
               (- marker)))))
 
@@ -174,10 +176,10 @@
   "helper function for pick-square-minimax"
   [result-sets marker]
   (cond
-    (= marker "X") (or (rand-seq-el (result-sets 1))
+    (= marker 1) (or (rand-seq-el (result-sets 1))
                        (rand-seq-el (result-sets 0))
                        (rand-seq-el (result-sets -1)))
-    (= marker "O") (or (rand-seq-el (result-sets -1))
+    (= marker -1) (or (rand-seq-el (result-sets -1))
                        (rand-seq-el (result-sets 0))
                        (rand-seq-el (result-sets 1)))))
 
@@ -225,22 +227,32 @@
             (picker grid marker)
             marker))
 
-(defn go []
-  (loop [grid empty-grid
-         marker "X"
-         picker pick-square-minimax]
-    (let [opposite-picker (fn [picker]
-                            (cond
-                              (= picker pick-square-heuristic) pick-square-minimax
-                              (= picker pick-square-minimax) pick-square-heuristic))]
+(defn final-message
+  [score]
+  (case score
+    (1 -1) (str "Game over! " (export-map score) " won." )
+    0 "Game over! Draw."))
+
+(defn make-it-so [player1-picker player2-picker]
+  (let [opposite-picker 
+        (toggler-maker player1-picker player2-picker)]
+    (loop [grid empty-grid
+           marker 1
+           picker player1-picker]
       (do (print-board grid))
-      (let [winning-player (winner grid)]
-        (cond
-          winning-player (str "Game over! " winning-player " won.")
-          (board-full? grid) "Game over! Draw."
-          :else (recur (get-next-grid picker grid marker)
-                       (- marker)
-                       picker))))))
+      (println "Next picking will be done with"
+               (if (= picker pick-square-minimax) "minimax" "heuristic"))
+      (let [score (final-score grid)]
+        (if score
+          (final-message score)
+          (recur (get-next-grid picker grid marker)
+                 (- marker)
+                 (opposite-picker picker)))))))
+
+(defn go
+  "for testing"
+  []
+  (make-it-so pick-square-heuristic pick-square-minimax))
     
 
 

@@ -22,6 +22,14 @@
    [-1  1  1]
    [ 1 -1 -1]])
 
+(def toggler-tester
+  (toggler-maker 3 4))
+
+(deftest toggler-maker-test
+  (testing "testing a function created by toggler-maker"
+    (is (= (toggler-tester 3)
+           4))))
+
 (deftest matrix-transpose-test
   (testing "transposing a board from organized by rows to organized by columns"
     (is (= (matrix-transpose [[1 2][3 4]])
