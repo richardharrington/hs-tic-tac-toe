@@ -17,52 +17,18 @@
      thing-1 thing-2
      thing-2 thing-1))
 
-(defn matrix-transpose
-  "transposes a 2d matrix"
-  [mtx]
-  (vec (apply map vector mtx)))
-
-; (defn import-grid
-;   "for testing only, so you can put in vectors of rows with Xs, Os and asterisks"
-;   [grid-template]
-;   (let [transposed (matrix-transpose grid-template)]
-;     (map (fn [x] 
-;            (map (fn [y] 
-;                   (case (get-in transposed [x y])
-;                     "X" 1
-;                     "O" -1
-;                     "*" 0)))
-;            x))
-;     transposed))
-
-(defn replace-in-all-2d
-  "returns a new version of a square 2d vector with all elements mapped to other elements
-  according to a passed-in map.
-  TODO: Ask someone how to do this better."
-  [v replacement-map dim]
-  (vec (for [x (range dim)]
-         (vec (for [y (range dim)]
-                (let [element (get-in v [x y])]
-                  (or (replacement-map element)
-                      element)))))))
-
-(defn convert-representation
-  "from display to internal representation and vice versa"
-  [representation replacement-map]
-  (replace-in-all-2d (matrix-transpose representation) replacement-map 3))
-
 (def import-map {"X" 1, "O" -1, " " 0})
 (def export-map (clojure.set/map-invert import-map))
                  
 (defn import-grid
   "for testing only, so you can put in vectors of rows with Xs, Os and spaces"
   [grid-template]
-  (convert-representation grid-template import-map))
+  (map #(import-map %) (flatten grid-template)))
   
 (defn export-grid-for-display
   "for printing"
   [grid]
-  (convert-representation grid export-map))
+  (partition 3 (map #(export-map %) grid)))
 
 (defn rand-seq-el
   "Returns a random element from a sequence (or nil if it's empty)"
@@ -71,24 +37,37 @@
     ((vec s) (rand-int (count s)))))   
    
 (defn coordinates-set
-  "returns a set of coordinate pairs for a 2d vector"
-  [v]
-  (set (for [i (range (count v))
-             j (range (count (v i)))]
+  "returns a set of coordinate pairs for a given size square grid"
+  [size]
+  (set (for [i (range size)
+             j (range size)]
          [i j])))
+
+(defn get-marker
+  "takes a 3x3 data structure represented as a flat vector
+  of length 9, and returns a marker at an x-y coordinate"
+  [grid [x y]]
+  (grid (+ (* y 3) x)))
+
+(defn assoc-marker
+  "returns a flat vector of length 9, representing a 3x3 data
+  structure with a marker updated at position x, y"
+  [grid [x y] marker]
+  (assoc grid (+ (* y 3) x) marker))
 
 (def empty-grid
   "an empty grid to start the game"
-  (vec (repeat 3 (vec (repeat 3 0)))))
+  (vec (repeat 9 0)))
   
 (defn free-squares
   "returns a set of coordinate pairs of free squares on the board"
   [grid]
-  (set (filter #(= (get-in grid %) 0) 
-               (coordinates-set grid))))
+  (set (filter #(= (get-marker grid %) 0) 
+               (coordinates-set 3))))
 
 (def three-squares-in-a-row-sets
-  "all the sets of three squares in a row"
+  "all the sets of three squares in a row
+  TODO: find someone to tell me how to do this better"
   (clojure.set/union 
     ; vertical wins
     (set (for [x (range 3)] 
@@ -127,9 +106,7 @@
 
 (defn board-full?
   [grid]
-  (not-any? (fn [column] 
-              (some #(= % 0) column))
-            grid))
+  (not-any? #{0} grid))
 
 (defn final-score
   "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
@@ -137,19 +114,18 @@
   TODO: Get someone to show me how to do this better."
   [grid]
   (some (fn [three-squares]
-          (let [val (quot (apply + (map #(get-in grid %) three-squares)) 3)]
+          (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
             (case val 
               0 (if (board-full? grid) 0 nil) 
               val)))
         three-squares-in-a-row-sets))
     
-(defn fill-random-square
+(defn pick-square-random
   "returns a grid with a random square filled
-  (for testing only, before AI is created)"
-  [grid marker]
-  (assoc-in grid 
-            (rand-seq-el (free-squares grid))
-            marker))
+  (for testing only, so that we can see results when players win and lose).
+  Extra parameter is because all other picking functions need to know which marker."
+  [grid _]
+  (rand-seq-el (free-squares grid)))
 
 (declare value-of-square-minimax)
 
@@ -166,7 +142,7 @@
   1 is an eventual win for X, 0 is a draw,
   -1 is an eventual win for O."
   [grid square marker]
-  (let [potential-grid (assoc-in grid square marker)]
+  (let [potential-grid (assoc-marker grid square marker)]
     (or (final-score potential-grid)
         (aggregate-value-of-free-squares-minimax 
               potential-grid 
@@ -175,13 +151,9 @@
 (defn pick-square-from-result-set
   "helper function for pick-square-minimax"
   [result-sets marker]
-  (cond
-    (= marker 1) (or (rand-seq-el (result-sets 1))
-                       (rand-seq-el (result-sets 0))
-                       (rand-seq-el (result-sets -1)))
-    (= marker -1) (or (rand-seq-el (result-sets -1))
-                       (rand-seq-el (result-sets 0))
-                       (rand-seq-el (result-sets 1)))))
+  (or (rand-seq-el (result-sets marker))
+      (rand-seq-el (result-sets 0))
+      (rand-seq-el (result-sets (- marker)))))
 
 (defn pick-square-minimax
   "picks a random (but good) square using the minimax algorithm"
@@ -209,7 +181,7 @@
                        (set (filter 
                               (fn [free-square]
                                 (some (fn [three-squares]
-                                        (every? #(= (get-in grid %) m) 
+                                        (every? #(= (get-marker grid %) m) 
                                                 (disj three-squares free-square)))
                                       three-squares-in-a-row-sets))
                               free)))]
@@ -223,9 +195,9 @@
 (defn get-next-grid
   "gets a new game state with one marker added"
   [picker grid marker]
-  (assoc-in grid
-            (picker grid marker)
-            marker))
+  (assoc-marker grid
+                (picker grid marker)
+                marker))
 
 (defn final-message
   [score]
@@ -240,8 +212,11 @@
            marker 1
            picker player1-picker]
       (do (print-board grid))
-      (println "Next picking will be done with"
-               (if (= picker pick-square-minimax) "minimax" "heuristic"))
+      (println "Debugging: next pick will be done with"
+               (condp = picker
+                 pick-square-minimax "minimax" 
+                 pick-square-heuristic "heuristic"
+                 "random"))
       (let [score (final-score grid)]
         (if score
           (final-message score)
@@ -252,7 +227,7 @@
 (defn go
   "for testing"
   []
-  (make-it-so pick-square-heuristic pick-square-minimax))
+  (make-it-so pick-square-random pick-square-minimax))
     
 
 

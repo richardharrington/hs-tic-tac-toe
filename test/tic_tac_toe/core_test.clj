@@ -3,24 +3,24 @@
             [tic-tac-toe.core :refer :all]))
 
 (def test-grid-template
-  [["X" "O" "X"] 
+  [["X" "O" "X"]
    ["O" " " "O"]
    ["O" " " "O"]])
 
 (def test-grid
-  [[ 1 -1 -1]
-   [-1  0  0]
-   [ 1 -1 -1]])
+  [ 1 -1  1
+   -1  0 -1
+   -1  0 -1 ])
 
 (def winner-test-grid
-  [[ 1  1  1]
-   [-1  0  0]
-   [ 1 -1 -1]])
+  [ 1 -1  1
+    1  0 -1
+    1  0 -1 ])
 
 (def board-full-grid
-  [[ 1 -1  1]
-   [-1  1  1]
-   [ 1 -1 -1]])
+  [ 1 -1  1
+   -1  1 -1
+    1  1 -1 ])
 
 (def toggler-tester
   (toggler-maker 3 4))
@@ -29,22 +29,6 @@
   (testing "testing a function created by toggler-maker"
     (is (= (toggler-tester 3)
            4))))
-
-(deftest matrix-transpose-test
-  (testing "transposing a board from organized by rows to organized by columns"
-    (is (= (matrix-transpose [[1 2][3 4]])
-           [[1 3][2 4]]))))
-
-(deftest replace-in-all-2d-test
-  (testing "replacing items in a square 2d vector of vectors"
-    (is (= (replace-in-all-2d [[1 2][3 4]] {1 "one" 2 "two" 3 "three"} 2)
-           [["one" "two"] ["three" 4]]))))
-
-(deftest convert-representation-test
-  (testing "converting a 3x3 grid by transposing and mapping the values"
-    (is (= (convert-representation [[1 2 3][4 5 6][7 8 9]] 
-                                   {1 :a 2 :b 3 :c 4 :d 5 :e 6 :f 7 :g 8 :h 9 :i})
-           [[:a :d :g][:b :e :h][:c :f :i]]))))
 
 (deftest import-grid-test
   (testing "importing a grid from an array of Xs, Os and spaces"
@@ -57,17 +41,18 @@
            test-grid-template))))
 
 (deftest coordinates-set-test
-  (testing "getting set of coordinates for 2d vector"
-    (is (= (coordinates-set [[9 9 8] [3 4 5]])
+  (testing "getting set of coordinate pairs for 2d square grid"
+    (is (= (coordinates-set 3)
            #{[0 0] [0 1] [0 2] 
-             [1 0] [1 1] [1 2]}))))
+             [1 0] [1 1] [1 2]
+             [2 0] [2 1] [2 2]}))))
 
 (deftest empty-grid-test
   (testing "generating an empty grid"
     (is (= empty-grid
-           [[0 0 0]
-            [0 0 0]
-            [0 0 0]]))))
+           [0 0 0
+            0 0 0
+            0 0 0]))))
 
 (deftest free-squares-test
   (testing "finding free squares"
@@ -101,12 +86,6 @@
                 "+---+---+---+\n"
                 "| O |   | O |\n"
                 "+---+---+---+\n")))))
-
-(deftest fill-random-square-test
-  (testing "filling a random square; testing at least whether there is one more of that type of marker"
-    (is (= (count (filter #(= % 1) 
-                          (flatten (fill-random-square test-grid 1))))
-           3))))
 
 (deftest board-full?-negative-test
   (testing "board is not full"
