@@ -55,7 +55,7 @@
 (def export-map (clojure.set/map-invert import-map))
                  
 (defn import-grid
-  "for testing only, so you can put in vectors of rows with Xs, Os and asterisks"
+  "for testing only, so you can put in vectors of rows with Xs, Os and spaces"
   [grid-template]
   (convert-representation grid-template import-map))
   
