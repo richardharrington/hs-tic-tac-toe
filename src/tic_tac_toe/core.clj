@@ -51,7 +51,7 @@
   [representation replacement-map]
   (replace-in-all-2d (matrix-transpose representation) replacement-map 3))
 
-(def import-map {"X" 1, "O" -1, "*" 0})
+(def import-map {"X" 1, "O" -1, " " 0})
 (def export-map (clojure.set/map-invert import-map))
                  
 (defn import-grid

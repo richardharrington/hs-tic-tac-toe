@@ -4,8 +4,8 @@
 
 (def test-grid-template
   [["X" "O" "X"] 
-   ["O" "*" "O"]
-   ["O" "*" "O"]])
+   ["O" " " "O"]
+   ["O" " " "O"]])
 
 (def test-grid
   [[ 1 -1 -1]
@@ -47,7 +47,7 @@
            [[:a :d :g][:b :e :h][:c :f :i]]))))
 
 (deftest import-grid-test
-  (testing "importing a grid from an array of Xs, Os and *s"
+  (testing "importing a grid from an array of Xs, Os and spaces"
     (is (= (import-grid test-grid-template)
            test-grid))))
 
@@ -97,9 +97,9 @@
            (str "+---+---+---+\n"
                 "| X | O | X |\n"
                 "+---+---+---+\n"
-                "| O | * | O |\n"
+                "| O |   | O |\n"
                 "+---+---+---+\n"
-                "| O | * | O |\n"
+                "| O |   | O |\n"
                 "+---+---+---+\n")))))
 
 (deftest fill-random-square-test
