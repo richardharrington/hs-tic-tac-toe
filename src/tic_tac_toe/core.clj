@@ -16,6 +16,52 @@
   [mtx]
   (vec (apply map vector mtx)))
 
+; (defn import-grid
+;   "for testing only, so you can put in vectors of rows with Xs, Os and asterisks"
+;   [grid-template]
+;   (let [transposed (matrix-transpose grid-template)]
+;     (map (fn [x] 
+;            (map (fn [y] 
+;                   (case (get-in transposed [x y])
+;                     "X" 1
+;                     "O" -1
+;                     "*" 0)))
+;            x))
+;     transposed))
+
+(defn replace-in-all-2d
+  "returns a new version of a square 2d vector with all elements mapped to other elements
+  according to a passed-in map.
+  TODO: Ask someone how to do this better."
+  [v replacement-map dim]
+  (vec (for [x (range dim)]
+         (vec (for [y (range dim)]
+                (let [element (get-in v [x y])]
+                  (or (replacement-map element)
+                      element)))))))
+                 
+(defn import-grid
+  "for testing only, so you can put in vectors of rows with Xs, Os and asterisks"
+  [grid-template]
+  (replace-in-all-2d 
+    (matrix-transpose grid-template)
+    {"X" 1, "O" -1, "*" 0}
+    3))
+  
+(defn export-grid-for-display
+  "for printing"
+  [grid]
+  (replace-in-all-2d 
+    (matrix-transpose grid)
+    {1 "X", -1 "O", 0 "*"}
+    3))
+  
+
+      
+    
+  
+;(defn export-grid-for-display [] [])
+
 (defn rand-seq-el
   "Returns a random element from a sequence (or nil if it's empty)"
   [s]
@@ -29,9 +75,8 @@
              j (range (count (v i)))]
          [i j])))
 
-(defn empty-grid
-  "returns an empty grid to start the game"
-  []
+(def empty-grid
+  "an empty grid to start the game"
   (vec (repeat 3 (vec (repeat 3 "*")))))
   
 (defn free-squares
@@ -189,7 +234,7 @@
             marker))
 
 (defn go []
-  (loop [grid (empty-grid)
+  (loop [grid empty-grid
          marker "X"
          picker pick-square-minimax]
     (let [opposite-picker (fn [picker]
