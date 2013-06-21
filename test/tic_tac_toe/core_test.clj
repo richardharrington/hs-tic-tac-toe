@@ -18,8 +18,8 @@
    [ 1 -1 -1]])
 
 (def board-full-grid
-  [[ 1  1  1]
-   [-1 -1  1]
+  [[ 1 -1  1]
+   [-1  1  1]
    [ 1 -1 -1]])
 
 (deftest matrix-transpose-test
@@ -100,22 +100,26 @@
                           (flatten (fill-random-square test-grid 1))))
            3))))
 
-(deftest winner-test-negative-test
-  (testing "winner nil"
-    (is (= (winner test-grid)
-           nil))))
-
-(deftest winner-test-positive-test
-  (testing "winner is X (1)"
-    (is (= (winner winner-test-grid)
-           1))))
-
 (deftest board-full?-negative-test
   (testing "board is not full"
     (is (not (board-full? test-grid)))))
 
 (deftest board-full?-positive-test
-  (testing "board is not full"
+  (testing "board is full"
     (is (board-full? board-full-grid))))
 
+(deftest final-score-negative-test
+  (testing "final score nil (not over yet)"
+    (is (= (final-score test-grid)
+           nil))))
+
+(deftest final-score-winner-X-test
+  (testing "winner is X (1)"
+    (is (= (final-score winner-test-grid)
+           1))))
+
+(deftest final-score-draw-test
+  (testing "winner is X (1)"
+    (is (= (final-score board-full-grid)
+           0))))
 

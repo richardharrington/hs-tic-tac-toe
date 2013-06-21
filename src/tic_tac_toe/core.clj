@@ -119,23 +119,24 @@
 
 (def print-board #(println (output-board %)))
 
-(defn winner
-  "returns 1, -1 or nil (needs well-formed input: no more than one winning sequence)
-  TODO: Get someone to show me how to do this better."
-  [grid]
-  (some (fn [three-squares]
-          (let [val (quot (apply + (map #(get-in grid %) three-squares)) 3)]
-            (case val 
-              0 nil 
-              val)))
-        three-squares-in-a-row-sets))
-    
 (defn board-full?
   [grid]
   (not-any? (fn [column] 
               (some #(= % 0) column))
             grid))
 
+(defn final-score
+  "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
+  yet (needs well-formed input: no more than one winning sequence)
+  TODO: Get someone to show me how to do this better."
+  [grid]
+  (some (fn [three-squares]
+          (let [val (quot (apply + (map #(get-in grid %) three-squares)) 3)]
+            (case val 
+              0 (if (board-full? grid) 0 nil) 
+              val)))
+        three-squares-in-a-row-sets))
+    
 (defn fill-random-square
   "returns a grid with a random square filled
   (for testing only, before AI is created)"
