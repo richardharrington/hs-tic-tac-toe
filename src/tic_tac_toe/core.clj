@@ -39,28 +39,24 @@
                 (let [element (get-in v [x y])]
                   (or (replacement-map element)
                       element)))))))
+
+(defn convert-representation
+  "from display to internal representation and vice versa"
+  [representation replacement-map]
+  (replace-in-all-2d (matrix-transpose representation) replacement-map 3))
+
+(def import-map {"X" 1, "O" -1, "*" 0})
+(def export-map (clojure.set/map-invert import-map))
                  
 (defn import-grid
   "for testing only, so you can put in vectors of rows with Xs, Os and asterisks"
   [grid-template]
-  (replace-in-all-2d 
-    (matrix-transpose grid-template)
-    {"X" 1, "O" -1, "*" 0}
-    3))
+  (convert-representation grid-template import-map))
   
 (defn export-grid-for-display
   "for printing"
   [grid]
-  (replace-in-all-2d 
-    (matrix-transpose grid)
-    {1 "X", -1 "O", 0 "*"}
-    3))
-  
-
-      
-    
-  
-;(defn export-grid-for-display [] [])
+  (convert-representation grid export-map))
 
 (defn rand-seq-el
   "Returns a random element from a sequence (or nil if it's empty)"
@@ -77,12 +73,12 @@
 
 (def empty-grid
   "an empty grid to start the game"
-  (vec (repeat 3 (vec (repeat 3 "*")))))
+  (vec (repeat 3 (vec (repeat 3 0)))))
   
 (defn free-squares
   "returns a set of coordinate pairs of free squares on the board"
   [grid]
-  (set (filter #(= (get-in grid %) "*") 
+  (set (filter #(= (get-in grid %) 0) 
                (coordinates-set grid))))
 
 (def three-squares-in-a-row-sets
@@ -102,23 +98,6 @@
       (set (for [i (range 3)]
              [i (- 2 i)]))}))
 
-(defn winner
-  "returns 'X', 'O', or nil"
-  [grid]
-  (some (fn [three-squares]
-          (let [all-one-marker (fn [marker]
-                                 (when (every? #(= (get-in grid %) marker) 
-                                         three-squares)
-                                   marker))]
-            (or (all-one-marker "X") (all-one-marker "O"))))
-        three-squares-in-a-row-sets))
-    
-(defn board-full?
-  [grid]
-  (not-any? (fn [column] 
-              (some #(= % "*") column))
-            grid))
-
 (defn interpose-bounding 
   "helper function for output-board,
   like interpose but adds on either end as well"
@@ -135,10 +114,27 @@
                       (apply str (concat (interpose-bounding 
                                            "|" 
                                            (map #(str " " % " ") row)) "\n")))
-                    (matrix-transpose grid)))))
+                    (export-grid-for-display grid)))))
  
 
 (def print-board #(println (output-board %)))
+
+(defn winner
+  "returns 1, -1 or nil (needs well-formed input: no more than one winning sequence)
+  TODO: Get someone to show me how to do this better."
+  [grid]
+  (some (fn [three-squares]
+          (let [val (quot (apply + (map #(get-in grid %) three-squares)) 3)]
+            (case val 
+              0 nil 
+              val)))
+        three-squares-in-a-row-sets))
+    
+(defn board-full?
+  [grid]
+  (not-any? (fn [column] 
+              (some #(= % 0) column))
+            grid))
 
 (defn fill-random-square
   "returns a grid with a random square filled
@@ -148,17 +144,12 @@
             (rand-seq-el (free-squares grid))
             marker))
 
-(defn opposite-marker [marker]
-  (case marker
-    "X" "O"
-    "O" "X"))
-
 (declare value-of-square-minimax)
 
 (defn aggregate-value-of-free-squares-minimax
   "helper function to use recursively with value-of-square-minimax"
   [grid marker]
-  (apply (if (= marker "X") max min)
+  (apply (if (= marker 1) max min)
          (map (fn [square]
                 (value-of-square-minimax grid square marker))
               (free-squares grid))))
@@ -176,7 +167,7 @@
       (board-full? potential-grid) 0
       :else (aggregate-value-of-free-squares-minimax 
               potential-grid 
-              (opposite-marker marker)))))
+              (- marker)))))
 
 (defn pick-square-from-result-set
   "helper function for pick-square-minimax"
@@ -221,7 +212,7 @@
                               free)))]
     
     (or (rand-seq-el (imminent-win marker))
-        (rand-seq-el (imminent-win (opposite-marker marker)))
+        (rand-seq-el (imminent-win (- marker)))
         (rand-seq-el (clojure.set/intersection #{[1 1]} free))
         (rand-seq-el (clojure.set/intersection #{[0 0][0 2][2 0][2 2]} free))
         (rand-seq-el free))))
@@ -247,7 +238,7 @@
           winning-player (str "Game over! " winning-player " won.")
           (board-full? grid) "Game over! Draw."
           :else (recur (get-next-grid picker grid marker)
-                       (opposite-marker marker)
+                       (- marker)
                        picker))))))
     
 
