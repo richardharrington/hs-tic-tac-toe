@@ -132,10 +132,14 @@
 (defn aggregate-value-of-free-squares-minimax
   "helper function to use recursively with value-of-square-minimax"
   [grid marker]
-  (apply (if (= marker 1) max min)
-         (map (fn [square]
-                (value-of-square-minimax grid square marker))
-              (free-squares grid))))
+  (reduce (fn [val square]
+            (cond
+              (or (= val marker) (= (value-of-square-minimax grid square marker) marker)) marker
+              (or (= val 0) (= (value-of-square-minimax grid square marker) 0)) 0
+              :else (- marker)))
+          (- marker)
+          (free-squares grid)))
+
 
 (defn value-of-square-minimax
   "determines the value of a square:
@@ -227,7 +231,7 @@
 (defn go
   "for testing"
   []
-  (make-it-so pick-square-random pick-square-minimax))
+  (make-it-so pick-square-minimax pick-square-minimax))
     
 
 
