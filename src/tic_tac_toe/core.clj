@@ -3,6 +3,9 @@
 
 (require '[clj-http.client :as client])
 (require 'clojure.set)
+(require '[cheshire.core :as json])
+
+(def server-path "http://localhost:5000")
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -55,9 +58,13 @@
   [grid [x y] marker]
   (assoc grid (+ (* y 3) x) marker))
 
-(def empty-grid
-  "an empty grid to start the game"
-  (vec (repeat 9 0)))
+(def empty-grid (vec (repeat 9 0)))
+
+(defn valid-grid
+  "prevents null pointer exceptions 
+   if a function needs to call a grid and it's nil"
+  [grid]
+  (or grid empty-grid))
   
 (defn free-squares
   "returns a set of coordinate pairs of free squares on the board"
@@ -66,8 +73,7 @@
                (coordinates-set 3))))
 
 (def three-squares-in-a-row-sets
-  "all the sets of three squares in a row
-  TODO: find someone to tell me how to do this better"
+  "all the sets of three squares in a row"
   (clojure.set/union 
     ; vertical wins
     (set (for [x (range 3)] 
@@ -113,12 +119,14 @@
   yet (needs well-formed input: no more than one winning sequence)
   TODO: Get someone to show me how to do this better."
   [grid]
-  (some (fn [three-squares]
-          (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
-            (case val 
-              0 (if (board-full? grid) 0 nil) 
-              val)))
-        three-squares-in-a-row-sets))
+  (let [grid (valid-grid grid)]
+    (some (fn [three-squares]
+            (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
+              (case val 
+                0 (if (board-full? grid) 0 nil) 
+                val)))
+          three-squares-in-a-row-sets)))
+ 
     
 (defn pick-square-random
   "returns a grid with a random square filled
@@ -132,25 +140,22 @@
 (defn aggregate-value-of-free-squares-minimax
   "helper function to use recursively with value-of-square-minimax"
   [grid marker]
-  (reduce (fn [val square]
-            (cond
-              (or (= val marker) (= (value-of-square-minimax grid square marker) marker)) marker
-              (or (= val 0) (= (value-of-square-minimax grid square marker) 0)) 0
-              :else (- marker)))
-          (- marker)
-          (free-squares grid)))
+  (apply (if (= marker 1) max min)
+         (map (fn [square]
+                (value-of-square-minimax grid square marker))
+              (free-squares grid))))
 
-
-(defn value-of-square-minimax
-  "determines the value of a square:
+(def value-of-square-minimax
+  "memoized function which determines the value of a square:
   1 is an eventual win for X, 0 is a draw,
   -1 is an eventual win for O."
-  [grid square marker]
-  (let [potential-grid (assoc-marker grid square marker)]
-    (or (final-score potential-grid)
-        (aggregate-value-of-free-squares-minimax 
+  (memoize 
+    (fn [grid square marker]
+      (let [potential-grid (assoc-marker grid square marker)]
+        (or (final-score potential-grid)
+            (aggregate-value-of-free-squares-minimax 
               potential-grid 
-              (- marker)))))
+              (- marker)))))))
 
 (defn pick-square-from-result-set
   "helper function for pick-square-minimax"
@@ -200,27 +205,27 @@
   "gets a new game state with one marker added"
   [picker grid marker]
   (assoc-marker grid
-                (picker grid marker)
+                (picker (valid-grid grid) marker)
                 marker))
-
+   
 (defn final-message
   [score]
   (case score
     (1 -1) (str "Game over! " (export-map score) " won." )
     0 "Game over! Draw."))
 
-(defn make-it-so [player1-picker player2-picker]
+; Beginning of the section for local play only.
+
+(defn play-game-local [player1-picker player2-picker]
+  "A function for playing a game with two local
+   pickers against each other.
+   TODO: Integrate this with the playing-against-the-server stuff"
   (let [opposite-picker 
         (toggler-maker player1-picker player2-picker)]
     (loop [grid empty-grid
            marker 1
            picker player1-picker]
       (do (print-board grid))
-      (println "Debugging: next pick will be done with"
-               (condp = picker
-                 pick-square-minimax "minimax" 
-                 pick-square-heuristic "heuristic"
-                 "random"))
       (let [score (final-score grid)]
         (if score
           (final-message score)
@@ -228,11 +233,69 @@
                  (- marker)
                  (opposite-picker picker)))))))
 
+; Beginning of the section related to playing a game with the server.
+
+(defn ask-server [player-id]
+  "Checks the server and returns result to poll-server below,
+   where the looping is done"
+  (Thread/sleep 50)
+  (let [{{status :status board :board} :body}
+            (client/get (str server-path "/get_board/" player-id) {:as :json})]
+    (if (= status "hold tight")
+      [false (board :board)]
+      [true board])))
+ 
+(defn send-server [board player-id]
+  (client/post (str server-path "/submit_board/" player-id) 
+               {:form-params {:data (json/generate-string {:board board})}}))
+
+; (def print-waiting-message
+;   "Prints a waiting message, but only once for each board configuration"
+;   (memoize (fn [board] (println "Awaiting opponent's move...\n"))))
+
+(defn poll-server 
+  "the main loop for playing a game with the server."
+  [player-id get-local-ply-cb]
+  (loop [[our-turn? board] (ask-server player-id)]
+    (let [score (final-score board)]
+      (if score
+        (final-message score)
+        (do
+          (when our-turn?
+            (print-board board)
+            (println "Now making local move...\n")
+            (let [new-board (get-local-ply-cb board)]
+              (print-board new-board)
+              (send-server new-board player-id)))
+          (recur (ask-server player-id)))))))
+        
+
+
+(defn play-request
+  "requests a new game from the server, and calls poll-server with
+  different parameters depending on whether we're player 1 or player 2
+  (which is determined by a slightly convoluted test, because of the server API)"
+  [local-picker]
+  (println "\nWelcome to tic-tac-toe")
+  (let [{{board :board, player1-id :player1, player2-id :player2} :body} 
+        (client/get (str server-path "/play_request") {:as :json})]
+    (cond 
+      ; if we didn't get a board, or we got a board
+      ; with one square already filled, then we're player 2.
+      (or (nil? board) (= (apply + board) 1))
+        (do 
+          (println "This computer will be playing Os\n with id" player2-id)
+          (poll-server player2-id (fn [board] (get-next-grid local-picker board -1))))
+      :else 
+        (do 
+          (println "This computer will be playing Xs\n with id" player1-id)
+          (poll-server player1-id (fn [board] (get-next-grid local-picker board 1)))))))
+
+
+; Convenience function for testing
+
 (defn go
-  "for testing"
+  "Function with a conveniently short name, for testing"
   []
-  (make-it-so pick-square-minimax pick-square-minimax))
-    
+  (play-request pick-square-minimax))
 
-
-  
