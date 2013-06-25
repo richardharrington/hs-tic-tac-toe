@@ -297,10 +297,24 @@
           (poll-server player1-id (fn [board] (get-next-grid local-picker board 1)))))))
 
 
-; Convenience function for testing
+; Testing functions
 
 (defn go
   "Function with a conveniently short name, for testing"
   []
   (play-request pick-square-minimax))
+
+(defn test-full-board-winning
+  "Function to test whether a full board can correctly score as winning"
+  []
+  (loop [grid nil]
+    (let [final (final-score grid)
+          full (board-full? grid)]
+      (if (and final (not= final 0) full)
+        (str (final-score grid) " won.")
+        (recur (play-game-local pick-square-heuristic pick-square-random))))))
+
+
+
+
 
