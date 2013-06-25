@@ -24,7 +24,9 @@
 (def export-map (clojure.set/map-invert import-map))
                  
 (defn import-grid
-  "for testing only, so you can put in vectors of rows with Xs, Os and spaces"
+  "for testing only, so you can put in vectors of rows with Xs, Os and spaces
+   and get out our internal representation: 1d vectors like [0 0 0 1 0 0 -1 -1 0]
+   where 1 is for X, -1 is for O and 0 is for blank"
   [grid-template]
   (map #(import-map %) (flatten grid-template)))
   
@@ -216,8 +218,8 @@
 (defn final-message
   [score]
   (case score
-    (1 -1) (str "Game over! " (export-map score) " won." )
-    0 "Game over! Draw."))
+    (1 -1) (str "Game over! " (export-map score) " won.\n" )
+    0 "Game over! Draw.\n"))
 
 ; Beginning of the section for local play only.
 
@@ -230,10 +232,12 @@
     (loop [grid empty-grid
            marker 1
            picker player1-picker]
-      (do (print-board grid))
+      (print-board grid)
       (let [score (final-score grid)]
         (if score
-          (final-message score)
+          (do 
+            (println (final-message score))
+            grid)
           (recur (get-next-grid picker grid marker)
                  (- marker)
                  (opposite-picker picker)))))))
@@ -264,13 +268,17 @@
   (loop [[our-turn? board] (ask-server player-id)]
     (let [score (final-score board)]
       (if score
-        (final-message score)
+        (do
+          (when our-turn? (print-board board))
+          (println (final-message score)))
         (do
           (when our-turn?
             (print-board board)
             (println "Now making local move...\n")
             (let [new-board (get-local-ply-cb board)]
               (print-board new-board)
+              (when (not (final-score new-board))
+                (println "Awaiting opponent's move...\n"))
               (send-server new-board player-id)))
           (recur (ask-server player-id)))))))
         
@@ -289,11 +297,11 @@
       ; with one square already filled, then we're player 2.
       (or (nil? board) (= (apply + board) 1))
         (do 
-          (println "This computer will be playing Os\n with id" player2-id)
+          (println "This computer will be playing Os with id" player2-id "\n")
           (poll-server player2-id (fn [board] (get-next-grid local-picker board -1))))
       :else 
         (do 
-          (println "This computer will be playing Xs\n with id" player1-id)
+          (println "This computer will be playing Xs with id" player1-id "\n")
           (poll-server player1-id (fn [board] (get-next-grid local-picker board 1)))))))
 
 
