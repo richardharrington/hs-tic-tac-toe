@@ -116,18 +116,23 @@
 
 (defn final-score
   "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
-  yet (needs well-formed input: no more than one winning sequence)
-  TODO: Get someone to show me how to do this better."
+  yet (needs well-formed input: no more than one winning sequence,
+  because it returns the first streak of 1s or -1s that it finds).
+  TODO: Get someone to show me how to do this better, without switching
+  back and forth between 0 and nil all the time."
   [grid]
   (let [grid (valid-grid grid)]
-    (some (fn [three-squares]
-            (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
-              (case val 
-                0 (if (board-full? grid) 0 nil) 
-                val)))
-          three-squares-in-a-row-sets)))
- 
-    
+    (or
+      (some (fn [three-squares]
+              (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
+                (if (= val 0) 
+                  nil 
+                  val)))
+            three-squares-in-a-row-sets)
+      (if (board-full? grid) 
+        0 
+        nil))))
+
 (defn pick-square-random
   "returns a grid with a random square filled
   (for testing only, so that we can see results when players win and lose).
