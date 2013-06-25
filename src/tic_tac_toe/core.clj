@@ -23,17 +23,17 @@
 (def import-map {"X" 1, "O" -1, " " 0})
 (def export-map (clojure.set/map-invert import-map))
                  
-(defn import-grid
+(defn import-board
   "for testing only, so you can put in vectors of rows with Xs, Os and spaces
    and get out our internal representation: 1d vectors like [0 0 0 1 0 0 -1 -1 0]
    where 1 is for X, -1 is for O and 0 is for blank"
-  [grid-template]
-  (map #(import-map %) (flatten grid-template)))
+  [board-template]
+  (map #(import-map %) (flatten board-template)))
   
-(defn export-grid-for-display
+(defn export-board-for-display
   "for printing"
-  [grid]
-  (partition 3 (map #(export-map %) grid)))
+  [board]
+  (partition 3 (map #(export-map %) board)))
 
 (defn rand-seq-el
   "Returns a random element from a sequence (or nil if it's empty)"
@@ -42,7 +42,7 @@
     ((vec s) (rand-int (count s)))))   
    
 (defn coordinates-set
-  "returns a set of coordinate pairs for a given size square grid"
+  "returns a set of coordinate pairs for a given size square board"
   [size]
   (set (for [i (range size)
              j (range size)]
@@ -51,27 +51,27 @@
 (defn get-marker
   "takes a 3x3 data structure represented as a flat vector
   of length 9, and returns a marker at an x-y coordinate"
-  [grid [x y]]
-  (grid (+ (* y 3) x)))
+  [board [x y]]
+  (board (+ (* y 3) x)))
 
 (defn assoc-marker
   "returns a flat vector of length 9, representing a 3x3 data
   structure with a marker updated at position x, y"
-  [grid [x y] marker]
-  (assoc grid (+ (* y 3) x) marker))
+  [board [x y] marker]
+  (assoc board (+ (* y 3) x) marker))
 
-(def empty-grid (vec (repeat 9 0)))
+(def empty-board (vec (repeat 9 0)))
 
-(defn valid-grid
+(defn valid-board
   "prevents null pointer exceptions 
-   if a function needs to call a grid and it's nil"
-  [grid]
-  (or grid empty-grid))
+   if a function needs to call a board and it's nil"
+  [board]
+  (or board empty-board))
   
 (defn free-squares
   "returns a set of coordinate pairs of free squares on the board"
-  [grid]
-  (set (filter #(= (get-marker grid %) 0) 
+  [board]
+  (set (filter #(= (get-marker board %) 0) 
                (coordinates-set 3))))
 
 (def three-squares-in-a-row-sets
@@ -100,21 +100,21 @@
 
 (defn output-board
   "returns a string for displaying the board"
-  [grid]
+  [board]
   (apply str (interpose-bounding 
                "+---+---+---+\n" 
                (map (fn [row] 
                       (apply str (concat (interpose-bounding 
                                            "|" 
                                            (map #(str " " % " ") row)) "\n")))
-                    (export-grid-for-display grid)))))
+                    (export-board-for-display board)))))
  
 
 (def print-board #(println (output-board %)))
 
 (defn board-full?
-  [grid]
-  (not-any? #{0} grid))
+  [board]
+  (not-any? #{0} board))
 
 (defn final-score
   "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
@@ -122,46 +122,46 @@
   because it returns the first streak of 1s or -1s that it finds).
   TODO: Get someone to show me how to do this better, without switching
   back and forth between 0 and nil all the time."
-  [grid]
-  (let [grid (valid-grid grid)]
+  [board]
+  (let [board (valid-board board)]
     (or
       (some (fn [three-squares]
-              (let [val (quot (apply + (map #(get-marker grid %) three-squares)) 3)]
+              (let [val (quot (apply + (map #(get-marker board %) three-squares)) 3)]
                 (if (= val 0) 
                   nil 
                   val)))
             three-squares-in-a-row-sets)
-      (if (board-full? grid) 
+      (if (board-full? board) 
         0 
         nil))))
 
 (defn pick-square-random
-  "returns a grid with a random square filled
+  "returns a board with a random square filled
   (for testing only, so that we can see results when players win and lose).
   Extra parameter is because all other picking functions need to know which marker."
-  [grid _]
-  (rand-seq-el (free-squares grid)))
+  [board _]
+  (rand-seq-el (free-squares board)))
 
 (declare value-of-square-minimax)
 
 (defn aggregate-value-of-free-squares-minimax
   "helper function to use recursively with value-of-square-minimax"
-  [grid marker]
+  [board marker]
   (apply (if (= marker 1) max min)
          (map (fn [square]
-                (value-of-square-minimax grid square marker))
-              (free-squares grid))))
+                (value-of-square-minimax board square marker))
+              (free-squares board))))
 
 (def value-of-square-minimax
   "memoized function which determines the value of a square:
   1 is an eventual win for X, 0 is a draw,
   -1 is an eventual win for O."
   (memoize 
-    (fn [grid square marker]
-      (let [potential-grid (assoc-marker grid square marker)]
-        (or (final-score potential-grid)
+    (fn [board square marker]
+      (let [potential-board (assoc-marker board square marker)]
+        (or (final-score potential-board)
             (aggregate-value-of-free-squares-minimax 
-              potential-grid 
+              potential-board 
               (- marker)))))))
 
 (defn pick-square-from-result-set
@@ -173,11 +173,11 @@
 
 (defn pick-square-minimax
   "picks a random (but good) square using the minimax algorithm"
-  [grid marker]
+  [board marker]
   (let [result-sets (reduce 
                       (fn [result-sets new-square]
                         (let [val-of-square (value-of-square-minimax
-                                              grid
+                                              board
                                               new-square
                                               marker)]
                           (assoc 
@@ -185,19 +185,19 @@
                             val-of-square 
                             (conj (result-sets val-of-square) new-square))))
                       {1 #{}, -1 #{}, 0 #{}}
-                      (free-squares grid))]
+                      (free-squares board))]
     (pick-square-from-result-set result-sets marker)))
 
 (defn pick-square-heuristic
   "picks the best square based on a series of priorities:
    1) Win, 2) Prevent imminent loss, 3) Center, 4) Corner, 5) Anywhere"
-  [grid marker]
-  (let [free (free-squares grid)
+  [board marker]
+  (let [free (free-squares board)
         imminent-win (fn [m]
                        (set (filter 
                               (fn [free-square]
                                 (some (fn [three-squares]
-                                        (every? #(= (get-marker grid %) m) 
+                                        (every? #(= (get-marker board %) m) 
                                                 (disj three-squares free-square)))
                                       three-squares-in-a-row-sets))
                               free)))]
@@ -208,11 +208,11 @@
         (rand-seq-el (clojure.set/intersection #{[0 0][0 2][2 0][2 2]} free))
         (rand-seq-el free))))
 
-(defn get-next-grid
+(defn get-next-board
   "gets a new game state with one marker added"
-  [picker grid marker]
-  (assoc-marker grid
-                (picker (valid-grid grid) marker)
+  [picker board marker]
+  (assoc-marker board
+                (picker (valid-board board) marker)
                 marker))
    
 (defn final-message
@@ -229,16 +229,16 @@
    TODO: Integrate this with the playing-against-the-server stuff"
   (let [opposite-picker 
         (toggler-maker player1-picker player2-picker)]
-    (loop [grid empty-grid
+    (loop [board empty-board
            marker 1
            picker player1-picker]
-      (print-board grid)
-      (let [score (final-score grid)]
+      (print-board board)
+      (let [score (final-score board)]
         (if score
           (do 
             (println (final-message score))
-            grid)
-          (recur (get-next-grid picker grid marker)
+            board)
+          (recur (get-next-board picker board marker)
                  (- marker)
                  (opposite-picker picker)))))))
 
@@ -298,11 +298,11 @@
       (or (nil? board) (= (apply + board) 1))
         (do 
           (println "This computer will be playing Os with id" player2-id "\n")
-          (poll-server player2-id (fn [board] (get-next-grid local-picker board -1))))
+          (poll-server player2-id (fn [board] (get-next-board local-picker board -1))))
       :else 
         (do 
           (println "This computer will be playing Xs with id" player1-id "\n")
-          (poll-server player1-id (fn [board] (get-next-grid local-picker board 1)))))))
+          (poll-server player1-id (fn [board] (get-next-board local-picker board 1)))))))
 
 
 ; Testing functions
@@ -315,11 +315,11 @@
 (defn test-full-board-winning
   "Function to test whether a full board can correctly score as winning"
   []
-  (loop [grid nil]
-    (let [final (final-score grid)
-          full (board-full? grid)]
+  (loop [board nil]
+    (let [final (final-score board)
+          full (board-full? board)]
       (if (and final (not= final 0) full)
-        (str (final-score grid) " won.")
+        (str (final-score board) " won.")
         (recur (play-game-local pick-square-heuristic pick-square-random))))))
 
 
