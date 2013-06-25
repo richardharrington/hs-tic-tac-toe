@@ -5,7 +5,12 @@
 (require 'clojure.set)
 (require '[cheshire.core :as json])
 
-(def server-path "http://localhost:5000")
+(def server-path "http://thomasballinger.com:8001/")
+
+; to run locally, clone the epo for the tictax server from
+; https://github.com/eriktaubeneck/tictax,
+; install python and Flask, run the server, and change the pathname above to
+; "http://localhost:5000/"
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -249,13 +254,13 @@
    where the looping is done"
   (Thread/sleep 50)
   (let [{{status :status board :board} :body}
-            (client/get (str server-path "/get_board/" player-id) {:as :json})]
+            (client/get (str server-path "get_board/" player-id) {:as :json})]
     (if (= status "hold tight")
       [false (board :board)]
       [true board])))
  
 (defn send-server [board player-id]
-  (client/post (str server-path "/submit_board/" player-id) 
+  (client/post (str server-path "submit_board/" player-id) 
                {:form-params {:data (json/generate-string {:board board})}}))
 
 ; (def print-waiting-message
@@ -291,7 +296,7 @@
   [local-picker]
   (println "\nWelcome to tic-tac-toe")
   (let [{{board :board, player1-id :player1, player2-id :player2} :body} 
-        (client/get (str server-path "/play_request") {:as :json})]
+        (client/get (str server-path "play_request") {:as :json})]
     (cond 
       ; if we didn't get a board, or we got a board
       ; with one square already filled, then we're player 2.
