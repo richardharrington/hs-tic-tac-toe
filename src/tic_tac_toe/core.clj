@@ -117,7 +117,6 @@
                                            "|" 
                                            (map #(str " " % " ") row)) "\n")))
                     (export-board-for-display board)))))
- 
 
 (def print-board #(println (output-board %)))
 
@@ -150,6 +149,44 @@
   Extra parameter is because all other picking functions need to know which marker."
   [board _]
   (rand-seq-el (free-squares board)))
+
+
+; User input section
+
+(defn valid-int-string [n]
+  (re-find #"^-?\d+$" n))
+
+(defn get-word-sequence [s]
+  (re-seq #"\S+" s))
+
+(defn convert-seq-to-int [s]
+  (if (every? valid-int-string s)
+    (map #(Integer/parseInt %) s)
+    nil))
+
+(defn convert-int-seq-to-0-idx [s]
+  (map dec s))
+
+(defn pick-square-from-user-input
+  "Get coordinates from user and see whether they
+  a) are 2 in number
+  b) fall within the correct bounds
+  c) represent a free square
+  (unused parameter is there because other picking methods need it)"
+  [board _]
+  (loop []
+    (println "Type in a coordinate pair (like '1 3' for 1 over and 3 down).")
+    (let [coords-1-idx (convert-seq-to-int (get-word-sequence (read-line)))
+          coords (and coords-1-idx (convert-int-seq-to-0-idx coords-1-idx))]
+      (if (and coords
+               (= (count coords) 2)
+               (every? #(<= 0 % 2) coords)
+               ((free-squares board) coords))
+        coords
+        (do
+          (println "Your typing might have been a little off. Try again.")
+          (recur))))))
+      
 
 (declare value-of-square-minimax)
 

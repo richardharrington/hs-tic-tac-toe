@@ -110,3 +110,33 @@
     (is (= (final-score board-full-grid)
            0))))
 
+(deftest valid-int-string-positive-test
+  (testing "valid-int-string positive"
+    (is (= (valid-int-string "76")
+           "76"))))
+
+(deftest valid-int-string-negative-test
+  (testing "valid-int-string negative"
+    (is (= (valid-int-string "cat")
+           nil))))
+
+(deftest get-word-sequence-test
+  (testing "get-word-sequence test"
+    (is (= (get-word-sequence "cat dog 7 banana")
+           '("cat" "dog" "7" "banana")))))
+
+(deftest convert-seq-to-int-negative-test
+  (testing "convert-seq-to-int negative"
+    (is (= (convert-seq-to-int ["cat" "dog" "7" "banana"])
+           nil))))
+
+(deftest convert-seq-to-int-positive-test
+  (testing "convert-seq-to-int positive"
+    (is (= (convert-seq-to-int ["4" "5" "7" "6"])
+           '(4 5 7 6)))))
+
+(deftest convert-int-seq-to-0-idx-test
+  (testing "convert-int-seq-to-0-idx"
+    (is (= (convert-int-seq-to-0-idx [1 3])
+           '(0 2)))))
+
