@@ -44,7 +44,7 @@
   "Returns a random element from a sequence (or nil if it's empty)"
   [s]
   (if (empty? s) nil
-    ((vec s) (rand-int (count s)))))   
+    ((vec s) (rand-int (count s))))) 
    
 (defn coordinates-set
   "returns a set of coordinate pairs for a given size square board"
@@ -52,6 +52,10 @@
   (set (for [i (range size)
              j (range size)]
          [i j])))
+
+; CODE REVIEW: have the whole thing be 1d from the start, and even if
+; it's 2d, have these get-marker and assoc-marker functions 
+; share a helper function to do the calculation
 
 (defn get-marker
   "takes a 3x3 data structure represented as a flat vector
@@ -149,6 +153,10 @@
 
 (declare value-of-square-minimax)
 
+; CODE REVIEW: This might be slow because of a lot of implicit
+; (or explicit) sequence conversions (vector to map; etc.)
+; TOOL: Visual VM
+
 (defn aggregate-value-of-free-squares-minimax
   "helper function to use recursively with value-of-square-minimax"
   [board marker]
@@ -177,7 +185,8 @@
       (rand-seq-el (result-sets (- marker)))))
 
 (defn pick-square-minimax
-  "picks a random (but good) square using the minimax algorithm"
+  "makes three sets of squares (winning, drawing and losing)
+   and picks at random from the best of them."
   [board marker]
   (let [result-sets (reduce 
                       (fn [result-sets new-square]
