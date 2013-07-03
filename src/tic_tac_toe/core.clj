@@ -11,53 +11,6 @@
 ; "http://localhost:5000/"
 
 
-(def import-map {"X" 1, "O" -1, " " 0})
-(def export-map (clojure.set/map-invert import-map))
-
-
-
-
-(defn import-board
-  "for testing only, so you can put in vectors of rows with Xs, Os and spaces
-   and get out our internal representation: 1d vectors like [0 0 0 1 0 0 -1 -1 0]
-   where 1 is for X, -1 is for O and 0 is for blank"
-  [board-template]
-  (map #(import-map %) (flatten board-template)))
-  
-(defn export-board-for-display
-  "for printing"
-  [board]
-  (partition 3 (map #(export-map %) board)))
-
-(defn rand-seq-el
-  "Returns a random element from a sequence (or nil if it's empty)"
-  [s]
-  (if (empty? s) nil
-    ((vec s) (rand-int (count s))))) 
-   
-(defn coordinates-set
-  "returns a set of coordinate pairs for a given size square board"
-  [size]
-  (set (for [i (range size)
-             j (range size)]
-         [i j])))
-
-; CODE REVIEW: have the whole thing be 1d from the start, and even if
-; it's 2d, have these get-marker and assoc-marker functions 
-; share a helper function to do the calculation
-
-(defn get-marker
-  "takes a 3x3 data structure represented as a flat vector
-  of length 9, and returns a marker at an x-y coordinate"
-  [board [x y]]
-  (board (+ (* y 3) x)))
-
-(defn assoc-marker
-  "returns a flat vector of length 9, representing a 3x3 data
-  structure with a marker updated at position x, y"
-  [board [x y] marker]
-  (assoc board (+ (* y 3) x) marker))
-
 (def empty-board (vec (repeat 9 0)))
 
 (defn valid-board
@@ -67,99 +20,46 @@
   (or board empty-board))
   
 (defn free-squares
-  "returns a set of coordinate pairs of free squares on the board"
+  "returns a set of indexes of free squares on the board"
   [board]
-  (set (filter #(= (get-marker board %) 0) 
-               (coordinates-set 3))))
-
-(def three-squares-in-a-row-sets
-  "all the sets of three squares in a row"
-  (clojure.set/union 
-    ; vertical wins
-    (set (for [x (range 3)] 
-           (set (for [y (range 3)] 
-                  [x y]))))
-    ; horizontal wins
-    (set (for [y (range 3)] 
-           (set (for [x (range 3)] 
-                  [x y]))))
-    ; diagonal wins
-    #{(set (for [i (range 3)]
-             [i i]))
-      (set (for [i (range 3)]
-             [i (- 2 i)]))}))
-
-
-
-
-
-
-
-
-
-
-
-
-(defn interpose-bounding 
-  "helper function for output-board,
-  like interpose but adds on either end as well"
-  [divider s]
-  (concat (interleave (repeat divider) s) 
-          [divider]))
-
-(defn output-board
-  "returns a string for displaying the board"
-  [board]
-  (apply str (interpose-bounding 
-               "+---+---+---+\n" 
-               (map (fn [row] 
-                      (apply str (concat (interpose-bounding 
-                                           "|" 
-                                           (map #(str " " % " ") row)) "\n")))
-                    (export-board-for-display board)))))
-
-(def print-board #(println (output-board %)))
+  (set (filter #(zero? (board %)) (range 9))))
 
 (defn board-full?
   [board]
-  (not-any? #{0} board))
-
-(def board
-  (range 9))
+  (not-any? zero? board))
 
 (defn score
-  "Given a board return:
-nil game not over
-1 X wins 
-0 tie
--1 O wins"
-  [board]
-  (when-not (board-full? board)
-    (let [rows (partition 3 board)
-          cols (apply (partial map vector) rows)
-          diags (for [coords [[0 4 8] [2 4 6]]]
-                  (map (vec board) coords))])))
+  "Given a board, return:
+  nil -- game not over
+  1   -- X wins 
+  0   -- tie
+  -1  -- O wins"
+[board]
+(let [rows (partition 3 board)
+      cols (apply map vector rows)
+      diags (for [diag [[0 4 8] [2 4 6]]]
+              (map board diag))
+      winner (some (fn [line]
+                     (case (apply + line)
+                       -3 -1
+                       3 1
+                       nil))
+                   (concat rows cols diags))]
+  (or winner (when (board-full? board) 0))))
+
+(defn imminent-wins [board marker]
+  (filter (fn [square]
+            (= (score (assoc board square marker)) marker))
+          (free-squares board)))
 
 
-
-(defn final-score
-  "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
-  yet (needs well-formed input: no more than one winning sequence,
-  because it returns the first streak of 1s or -1s that it finds).
-  TODO: Get someone to show me how to do this better, without switching
-  back and forth between 0 and nil all the time."
-  [board]
-  (let [board (valid-board board)]
-    (or
-      (some (fn [three-squares]
-              (let [val (quot (apply + (map #(get-marker board %) three-squares)) 3)]
-                (if (= val 0) 
-                  nil 
-                  val)))
-            three-squares-in-a-row-sets)
-      (if (board-full? board) 
-        0 
-        nil))))
+; Now for the picking functions         
+          
+(defn rand-seq-el
+  "Returns a random element from a sequence (or nil if it's empty)"
+  [s]
+  (if (empty? s) nil
+    ((vec s) (rand-int (count s))))) 
 
 (defn pick-square-random
   "returns a board with a random square filled
@@ -168,8 +68,7 @@ nil game not over
   [board _]
   (rand-seq-el (free-squares board)))
 
-
-; User input section
+; User input picking
 
 (defn valid-int-string [n]
   (re-find #"^-?\d+$" n))
@@ -182,9 +81,6 @@ nil game not over
     (map #(Integer/parseInt %) s)
     nil))
 
-(defn convert-int-seq-to-0-idx [s]
-  (map dec s))
-
 (defn pick-square-from-user-input
   "Get coordinates from user and see whether they
   a) are 2 in number
@@ -194,21 +90,20 @@ nil game not over
   [board _]
   (loop []
     (println "Type in a coordinate pair (like '1 3' for 1 over and 3 down).")
-    (let [coords-1-idx (convert-seq-to-int (get-word-sequence (read-line)))
-          coords (and coords-1-idx (convert-int-seq-to-0-idx coords-1-idx))]
+    (let [coords-idx-from-1 (convert-seq-to-int (get-word-sequence (read-line)))
+          coords (and coords-idx-from-1 (map dec coords-idx-from-1))]
       (if (and coords
                (= (count coords) 2)
                (every? #(<= 0 % 2) coords)
                ((free-squares board) coords))
-        coords
+        (+ (coords 0) (* (coords 1) 3))
         (do
           (println "Your typing might have been a little off. Try again.")
           (recur))))))
-      
 
 (declare value-of-square-minimax)
 
-; CODE REVIEW: This might be slow because of a lot of implicit
+; CODE REVIEW WITH ALEX: This might be slow because of a lot of implicit
 ; (or explicit) sequence conversions (vector to map; etc.)
 ; TOOL: Visual VM
 
@@ -222,12 +117,12 @@ nil game not over
 
 (def value-of-square-minimax
   "memoized function which determines the value of a square:
-  1 is an eventual win for X, 0 is a draw,
+  1 is an eventual win for X, 0 is a tie,
   -1 is an eventual win for O."
   (memoize 
     (fn [board square marker]
-      (let [potential-board (assoc-marker board square marker)]
-        (or (final-score potential-board)
+      (let [potential-board (assoc board square marker)]
+        (or (score potential-board)
             (aggregate-value-of-free-squares-minimax 
               potential-board 
               (- marker)))))))
@@ -259,30 +154,50 @@ nil game not over
 
 (defn pick-square-heuristic
   "picks the best square based on a series of priorities:
-   1) Win, 2) Prevent imminent loss, 3) Center, 4) Corner, 5) Anywhere"
-  [board marker]
-  (let [free (free-squares board)
-        imminent-win (fn [m]
-                       (set (filter 
-                              (fn [free-square]
-                                (some (fn [three-squares]
-                                        (every? #(= (get-marker board %) m) 
-                                                (disj three-squares free-square)))
-                                      three-squares-in-a-row-sets))
-                              free)))]
-    
-    (or (rand-seq-el (imminent-win marker))
-        (rand-seq-el (imminent-win (- marker)))
-        (rand-seq-el (clojure.set/intersection #{[1 1]} free))
-        (rand-seq-el (clojure.set/intersection #{[0 0][0 2][2 0][2 2]} free))
-        (rand-seq-el free))))
+  1) Win, 2) Prevent imminent loss, 3) Center, 4) Corner, 5) Anywhere"
+[board marker]
+(println (imminent-wins board marker))
+(println (imminent-wins board (- marker)))
+(or (rand-seq-el (imminent-wins board marker))
+    (rand-seq-el (imminent-wins board (- marker)))
+    (rand-seq-el (clojure.set/intersection #{4} (free-squares board)))
+    (rand-seq-el (clojure.set/intersection #{0 2 6 8} (free-squares board)))
+    (rand-seq-el (free-squares board))))
 
 (defn get-next-board
   "gets a new game state with one marker added"
   [picker board marker]
-  (assoc-marker board
-                (picker (valid-board board) marker)
-                marker))
+  (assoc board (picker (valid-board board) marker) marker))
+
+
+; Now for all the code that actually plays and outputs games
+
+(def export-map {1 "X", -1 "O", 0 " "})
+
+(defn export-board-for-display
+  "for printing"
+  [board]
+  (partition 3 (map #(export-map %) board)))
+
+(defn interpose-bounding 
+  "helper function for output-board,
+  like interpose but adds on either end as well"
+  [divider s]
+  (concat (interleave (repeat divider) s) 
+          [divider]))
+
+(defn output-board
+  "returns a string for displaying the board"
+  [board]
+  (apply str (interpose-bounding 
+               "+---+---+---+\n" 
+               (map (fn [row] 
+                      (apply str (concat (interpose-bounding 
+                                           "|" 
+                                           (map #(str " " % " ") row)) "\n")))
+                    (export-board-for-display board)))))
+
+(def print-board #(println (output-board %)))
    
 (defn final-message
   [score]
@@ -303,10 +218,10 @@ nil game not over
            marker 1
            picker player1-picker]
       (print-board board)
-      (let [score (final-score board)]
-        (if score
+      (let [scr (score board)]
+        (if scr
           (do 
-            (println (final-message score))
+            (println (final-message scr))
             board)
           (recur (get-next-board picker board marker)
                  (- marker)
@@ -336,8 +251,8 @@ nil game not over
   "the main loop for playing a game with the server."
   [player-id get-local-ply-cb]
   (loop [[our-turn? board] (ask-server player-id)]
-    (let [score (final-score board)]
-      (if score
+    (let [scr (score board)]
+      (if scr
         (do
           (when our-turn? (print-board board))
           (println (final-message score)))
@@ -347,7 +262,7 @@ nil game not over
             (println "Now making local move...\n")
             (let [new-board (get-local-ply-cb board)]
               (print-board new-board)
-              (when (not (final-score new-board))
+              (when (not (score new-board))
                 (println "Awaiting opponent's move...\n"))
               (send-server new-board player-id)))
           (recur (ask-server player-id)))))))
@@ -381,18 +296,4 @@ nil game not over
   "Function with a conveniently short name, for testing"
   []
   (play-request pick-square-minimax))
-
-(defn test-full-board-winning
-  "Function to test whether a full board can correctly score as winning"
-  []
-  (loop [board nil]
-    (let [final (final-score board)
-          full (board-full? board)]
-      (if (and final (not= final 0) full)
-        (str (final-score board) " won.")
-        (recur (play-game-local pick-square-heuristic pick-square-random))))))
-
-
-
-
 
