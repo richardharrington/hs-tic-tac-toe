@@ -1,7 +1,9 @@
 (ns tic-tac-toe.core
-  (:require [clj-http.client :as client]
-            clojure.set
-            [cheshire.core :as json]))
+  (:gen-class))
+
+(require '[clj-http.client :as client])
+(require 'clojure.set)
+(require '[cheshire.core :as json])
 
 (def server-path "http://thomasballinger.com:8001/")
 
@@ -10,13 +12,22 @@
 ; install python and Flask, run the server, and change the pathname above to
 ; "http://localhost:5000/"
 
+(defn -main
+  "I don't do a whole lot ... yet."
+  [& args]
+  ;; work around dangerous default behaviour in Clojure
+  (alter-var-root #'*read-eval* (constantly false)))
+
+(defn toggler-maker
+  "makes a function that toggles two things"
+  [thing-1 thing-2]
+  #(condp = %
+     thing-1 thing-2
+     thing-2 thing-1))
 
 (def import-map {"X" 1, "O" -1, " " 0})
 (def export-map (clojure.set/map-invert import-map))
-
-
-
-
+                 
 (defn import-board
   "for testing only, so you can put in vectors of rows with Xs, Os and spaces
    and get out our internal representation: 1d vectors like [0 0 0 1 0 0 -1 -1 0]
@@ -89,17 +100,6 @@
       (set (for [i (range 3)]
              [i (- 2 i)]))}))
 
-
-
-
-
-
-
-
-
-
-
-
 (defn interpose-bounding 
   "helper function for output-board,
   like interpose but adds on either end as well"
@@ -123,24 +123,6 @@
 (defn board-full?
   [board]
   (not-any? #{0} board))
-
-(def board
-  (range 9))
-
-(defn score
-  "Given a board return:
-nil game not over
-1 X wins 
-0 tie
--1 O wins"
-  [board]
-  (when-not (board-full? board)
-    (let [rows (partition 3 board)
-          cols (apply (partial map vector) rows)
-          diags (for [coords [[0 4 8] [2 4 6]]]
-                  (map (vec board) coords))])))
-
-
 
 (defn final-score
   "returns 1 for X, -1 for O, 0 for draw, and nil if the game is not over 
@@ -296,9 +278,8 @@ nil game not over
   "A function for playing a game with two local
    pickers against each other.
    TODO: Integrate this with the playing-against-the-server stuff"
-  (let [opposite-picker {player1-picker player2-picker
-                         player2-picker player1-picker}]
-    
+  (let [opposite-picker 
+        (toggler-maker player1-picker player2-picker)]
     (loop [board empty-board
            marker 1
            picker player1-picker]
