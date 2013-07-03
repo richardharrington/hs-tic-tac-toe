@@ -2,15 +2,15 @@
   (:require [clojure.test :refer :all]
             [tic-tac-toe.core :refer :all]))
 
-(def test-grid-template
-  [["X" "O" "X"]
-   ["O" " " "O"]
-   ["O" " " "O"]])
-
 (def test-grid
   [ 1 -1  1
    -1  0 -1
    -1  0 -1 ])
+
+(def test-grid-exported
+  [["X" "O" "X"]
+   ["O" " " "O"]
+   ["O" " " "O"]])
 
 (def winner-test-grid
   [ 1 -1  1
@@ -22,23 +22,10 @@
    -1  1 -1
     1  1 -1 ])
 
-(def toggler-tester
-  (toggler-maker 3 4))
-
-(deftest toggler-maker-test
-  (testing "testing a function created by toggler-maker"
-    (is (= (toggler-tester 3)
-           4))))
-
-(deftest import-grid-test
-  (testing "importing a grid from an array of Xs, Os and spaces"
-    (is (= (import-grid test-grid-template)
-           test-grid))))
-
 (deftest export-grid-for-display-test
   (testing "exporting grid for display"
     (is (= (export-grid-for-display test-grid)
-           test-grid-template))))
+           test-grid-exported))))
 
 (deftest coordinates-set-test
   (testing "getting set of coordinate pairs for 2d square grid"
