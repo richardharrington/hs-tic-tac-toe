@@ -255,7 +255,7 @@
       (if scr
         (do
           (when our-turn? (print-board board))
-          (println (final-message score)))
+          (println (final-message scr)))
         (do
           (when our-turn?
             (print-board board)
