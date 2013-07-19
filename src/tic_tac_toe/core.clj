@@ -81,6 +81,14 @@
     (map #(Integer/parseInt %) s)
     nil))
 
+(defn valid-coords [coords]
+  (and coords
+       (= (count coords) 2)
+       (every? #(<= 0 % 2) coords)))
+
+(defn flatten-coords [[x y]]
+  (+ (* 3 y) x))
+
 (defn pick-square-from-user-input
   "Get coordinates from user and see whether they
   a) are 2 in number
@@ -90,17 +98,15 @@
   [board _]
   (loop []
     (println "Type in a coordinate pair (like '1 3' for 1 over and 3 down).")
-    (let [coords-idx-from-1 (convert-seq-to-int (get-word-sequence (read-line)))
-          coords (and coords-idx-from-1 (map dec coords-idx-from-1))]
-      (if (and coords
-               (= (count coords) 2)
-               (every? #(<= 0 % 2) coords)
-               ((free-squares board) coords))
-        (+ (coords 0) (* (coords 1) 3))
+    (let [coords (->> (read-line) get-word-sequence convert-seq-to-int (map dec))
+          square (and (valid-coords coords) 
+                      (flatten-coords coords))]
+      (if ((free-squares board) square)
+        square
         (do
           (println "Your typing might have been a little off. Try again.")
           (recur))))))
-
+       
 (declare value-of-square-minimax)
 
 ; CODE REVIEW WITH ALEX: This might be slow because of a lot of implicit
