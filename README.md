@@ -1,4 +1,4 @@
-# hs-tic-tac-toe 
+# tic-tac-toe 
 
 ## An AI Tic Tac Toe to be played locally or over a server
 
@@ -6,11 +6,11 @@
 
 Install [leiningen](http://leiningen.org), then clone this project:
 
-    git clone git://github.com/richardharrington/hs-tic-tac-toe.git
+    git clone git://github.com/richardharrington/tic-tac-toe.git
 
 ### Run locally:
 
-    cd <path-to>/hs-tic-tac-toe
+    cd <path-to>/tic-tac-toe
     lein repl
     (play-game-local pick-square-minimax pick-square-minimax)
 
@@ -18,7 +18,7 @@ You can also use `pick-square-heuristic`, `pick-square-from-user-input`, or `pic
 
 ### Run over the server:
 
-    cd <path-to>/hs-tic-tac-toe
+    cd <path-to>/tic-tac-toe
     lein repl
     (play-request pick-square-minimax)
 
